@@ -36,6 +36,41 @@ def equipment():
                            technicians=technicians,
                            active_page='equipment')
 
+@pages_bp.route('/calendar')
+def calendar():
+    if 'user' not in session: return redirect(url_for('auth.home'))
+    return render_template('calendar.html', active_page='calendar')
+
+# API for the Calendar to fetch events
+@pages_bp.route('/api/calendar/events')
+def get_calendar_events():
+    if 'user' not in session: return jsonify([]), 401
+    
+    # Fetch all requests that have a scheduled date
+    requests = list(db.requests.find({"scheduled_date": {"$ne": None}}))
+    events = []
+
+    for req in requests:
+        # Determine color based on status_color or type
+        color = '#007bff' # Default Blue
+        if req.get('status_color') == 'red': color = '#ff3b30' # Apple Red
+        elif req.get('status_color') == 'green': color = '#34c759' # Apple Green
+        elif req.get('type') == 'Preventive': color = '#5856d6' # Apple Purple
+
+        events.append({
+            "id": str(req['_id']),
+            "title": f"{req.get('subject')} ({req.get('equipment_name')})",
+            "start": req['scheduled_date'].isoformat(),
+            "backgroundColor": color,
+            "borderColor": color,
+            "extendedProps": {
+                "technician": req.get('technician', 'Unassigned'),
+                "type": req.get('type', 'Corrective')
+            }
+        })
+    
+    return jsonify(events)
+
 # NEW: API to Add Equipment
 @pages_bp.route('/api/equipment/add', methods=['POST'])
 def add_equipment():
@@ -67,14 +102,3 @@ def teams():
     return render_template('teams.html', 
                            teams=teams_list, 
                            active_page='teams')
-
-@pages_bp.route('/calendar')
-def calendar():
-    if not check_login(): return redirect(url_for('auth.home'))
-    
-    # Fetch only Preventive maintenance for the calendar (as per outline)
-    preventive_reqs = list(db.requests.find({"type": "Preventive"}))
-    
-    return render_template('calendar.html', 
-                           requests=preventive_reqs, 
-                           active_page='calendar')

@@ -1,12 +1,106 @@
 {% extends "base.html" %}
+
 {% block content %}
-    <h2>Maintenance Calendar (Preventive Only)</h2>
-    <ul>
-        {% for req in requests %}
-            <li>
-                <strong>{{ req.scheduled_date }}</strong>: 
-                {{ req.subject }} on {{ req.equipment_name }}
-            </li>
-        {% endfor %}
-    </ul>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+
+<div class="calendar-card">
+    <div id="calendar"></div>
+</div>
+
+<style>
+    /* APPLE CALENDAR STYLE OVERRIDES */
+    :root {
+        --fc-border-color: #e5e5e5;
+        --fc-today-bg-color: #fcfcfc;
+        --fc-button-bg-color: #ffffff;
+        --fc-button-border-color: #d1d1d6;
+        --fc-button-text-color: #007aff;
+        --fc-button-hover-bg-color: #f2f2f7;
+    }
+
+    .calendar-card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        border: 1px solid #efeff4;
+    }
+
+    /* Header Styling */
+    .fc-header-toolbar {
+        margin-bottom: 30px !important;
+    }
+
+    .fc-toolbar-title {
+        font-size: 22px !important;
+        font-weight: 600 !important;
+        color: #1c1c1e;
+    }
+
+    .fc-button {
+        text-transform: capitalize !important;
+        font-weight: 500 !important;
+        box-shadow: none !important;
+    }
+
+    .fc-button-active {
+        background-color: #007aff !important;
+        color: white !important;
+        border-color: #007aff !important;
+    }
+
+    /* Grid Styling */
+    .fc-theme-standard td, .fc-theme-standard th {
+        border: 1px solid #f2f2f7 !important;
+    }
+
+    .fc-day-today {
+        background-color: var(--fc-today-bg-color) !important;
+    }
+
+    .fc-daygrid-day-number {
+        font-size: 13px;
+        color: #8e8e93;
+        padding: 8px !important;
+    }
+
+    /* Event Styling */
+    .fc-event {
+        border-radius: 4px !important;
+        padding: 2px 5px !important;
+        font-size: 11px !important;
+        font-weight: 500 !important;
+        border: none !important;
+        margin-bottom: 2px !important;
+        cursor: pointer;
+    }
+
+    .fc-event:hover {
+        opacity: 0.8;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,listMonth'
+            },
+            events: '/api/calendar/events', // Our Python API
+            eventClick: function(info) {
+                // We can reuse your Smart Modal here!
+                // Since this page extends base.html, we just need to ensure 
+                // the modal HTML is available or redirect to dashboard with ID.
+                window.location.href = '/dashboard?open=' + info.event.id;
+            },
+            height: 'auto',
+            fixedWeekCount: false,
+        });
+        calendar.render();
+    });
+</script>
 {% endblock %}
