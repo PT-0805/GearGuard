@@ -1,5 +1,6 @@
 from flask import Blueprint, session, redirect, url_for, render_template, request, jsonify
 from database import get_db
+from bson.objectid import ObjectId
 
 pages_bp = Blueprint('pages', __name__)
 db = get_db()
@@ -71,6 +72,42 @@ def get_calendar_events():
     
     return jsonify(events)
 
+@pages_bp.route('/teams')
+def teams():
+    if 'user' not in session: return redirect(url_for('auth.home'))
+    
+    teams_list = list(db.teams.find())
+    return render_template('teams.html', teams=teams_list, active_page='teams')
+
+@pages_bp.route('/api/teams/save', methods=['POST'])
+def save_team():
+    if 'user' not in session: return redirect(url_for('auth.home'))
+    
+    team_id = request.form.get('team_id')
+    # Filter out empty member names from the dynamic list
+    members = [m for m in request.form.getlist('members[]') if m.strip()]
+    
+    data = {
+        "name": request.form.get('name'),
+        "company": request.form.get('company'),
+        "members": members
+    }
+
+    if team_id:
+        db.teams.update_one({"_id": ObjectId(team_id)}, {"$set": data})
+    else:
+        db.teams.insert_one(data)
+        
+    return redirect(url_for('pages.teams'))
+
+@pages_bp.route('/api/teams/<team_id>')
+def get_team_details(team_id):
+    team = db.teams.find_one({"_id": ObjectId(team_id)})
+    if team:
+        team['_id'] = str(team['_id'])
+        return jsonify(team)
+    return jsonify({"error": "Not found"}), 404
+
 # NEW: API to Add Equipment
 @pages_bp.route('/api/equipment/add', methods=['POST'])
 def add_equipment():
@@ -94,11 +131,11 @@ def add_equipment():
     # Redirect back to the equipment page to see the new item
     return redirect(url_for('pages.equipment'))
 
-@pages_bp.route('/teams')
-def teams():
-    if not check_login(): return redirect(url_for('auth.home'))
-    
-    teams_list = list(db.teams.find())
-    return render_template('teams.html', 
-                           teams=teams_list, 
-                           active_page='teams')
+@pages_bp.route('/api/teams/delete/<team_id>', methods=['POST'])
+def delete_team(team_id):
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    try:
+        db.teams.delete_one({"_id": ObjectId(team_id)})
+        return redirect(url_for('pages.teams'))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
