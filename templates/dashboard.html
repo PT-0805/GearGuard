@@ -1,43 +1,185 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <div style="display: flex; gap: 20px; margin-bottom: 30px;">
-        <div style="flex: 1; padding: 20px; background: #ffe5e5; border: 1px solid red; border-radius: 10px; text-align: center;">
-            <h3>Critical Equipment</h3>
-            <h1>{{ kpi.critical_count }} Units</h1>
-            <small>(Health < 30%)</small>
-        </div>
-        <div style="flex: 1; padding: 20px; background: #e6f2ff; border: 1px solid blue; border-radius: 10px; text-align: center;">
-            <h3>Technician Load</h3>
-            <h1>{{ kpi.tech_load }}%</h1>
-            <small>Utilized</small>
-        </div>
-        <div style="flex: 1; padding: 20px; background: #e6fffa; border: 1px solid green; border-radius: 10px; text-align: center;">
-            <h3>Open Requests</h3>
-            <h1>{{ kpi.open_requests }} Pending</h1>
-            <small>{{ kpi.overdue }} Overdue</small>
-        </div>
-    </div>
-
     <h2>Recent Requests</h2>
-    <table>
+    <table class="request-table">
         <thead>
             <tr>
                 <th>Subject</th>
                 <th>Equipment</th>
-                <th>Type</th>
                 <th>Stage</th>
             </tr>
         </thead>
         <tbody>
             {% for req in requests %}
-            <tr>
+            <tr onclick="openModal('{{ req._id }}')" style="cursor: pointer;">
                 <td>{{ req.subject }}</td>
                 <td>{{ req.equipment_name }}</td>
-                <td>{{ req.type }}</td>
                 <td>{{ req.stage }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <div id="requestModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;">
+        
+        <div style="background: white; width: 850px; padding: 30px; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.2); position: relative;">
+            
+            <span onclick="closeModal()" style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999;">&times;</span>
+
+            <div style="border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <h1 id="m_subject" style="margin: 0;">Loading...</h1>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="position: relative;">
+                        <div id="statusCircle" onclick="toggleStatusMenu()" 
+                             style="width: 20px; height: 20px; border-radius: 50%; background-color: grey; cursor: pointer; border: 2px solid #ddd;">
+                        </div>
+                        
+                        <div id="statusMenu" style="display: none; position: absolute; top: 30px; right: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 180px; overflow: hidden;">
+                            <div onclick="setStatus('in_progress')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; hover:bg-gray-100;">
+                                <div style="width: 10px; height: 10px; border-radius: 50%; background: grey;"></div> In Progress
+                            </div>
+                            <div onclick="setStatus('blocked')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div> Blocked
+                            </div>
+                            <div onclick="setStatus('ready')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 10px; height: 10px; border-radius: 50%; background: green;"></div> Ready for Next Stage
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #f9f9f9; padding: 5px 15px; border-radius: 20px; border: 1px solid #ddd; font-size: 14px; color: #666;">
+                        New Request > <b>In Progress</b> > Repaired > Scrap
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 40px; margin-bottom: 20px;">
+                <div style="flex: 1;">
+                    <p><strong>Created By:</strong> <span id="m_employee">...</span></p>
+                    <p><strong>Equipment:</strong> <span id="m_equipment" style="color: #007bff; font-weight: bold;">...</span></p>
+                    <p><strong>Category:</strong> <span id="m_category">...</span></p>
+                </div>
+                <div style="flex: 1;">
+                    <p><strong>Technician:</strong> <span id="m_technician">...</span></p>
+                    <p><strong>Scheduled Date:</strong> <span id="m_date">...</span></p>
+                </div>
+            </div>
+
+            <div>
+                <button style="background: none; border: none; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 5px;">Notes</button>
+                <button style="background: none; border: none; color: #999; margin-left: 20px;">Instructions</button>
+                
+                <textarea id="m_notes" 
+                          oninput="autoSaveNotes()" 
+                          placeholder="Type notes here... (Auto-saving)" 
+                          style="width: 100%; height: 80px; margin-top: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: sans-serif; resize: none;"></textarea>
+                <small id="save_status" style="color: green; display: none; margin-top: 5px;">Saved</small>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let currentRequestId = null;
+        let saveTimeout = null;
+
+        // 1. Open Modal & Load Data
+        async function openModal(requestId) {
+            currentRequestId = requestId;
+            const modal = document.getElementById('requestModal');
+            modal.style.display = "flex";
+            
+            // Fetch Data
+            const response = await fetch(`/api/request/${requestId}`);
+            const data = await response.json();
+            
+            // Fill Fields
+            document.getElementById('m_subject').innerText = data.subject;
+            document.getElementById('m_employee').innerText = data.employee;
+            document.getElementById('m_equipment').innerText = data.equipment_name;
+            document.getElementById('m_category').innerText = data.category;
+            document.getElementById('m_technician').innerText = data.technician || "Unassigned";
+            document.getElementById('m_date').innerText = data.scheduled_date || "-";
+            
+            // Fill Notes
+            document.getElementById('m_notes').value = data.notes;
+
+            // Set Status Circle Color
+            updateCircleColor(data.status_state);
+        }
+
+        function closeModal() {
+            document.getElementById('requestModal').style.display = "none";
+            document.getElementById('statusMenu').style.display = "none";
+        }
+
+        // 2. Status Circle Logic
+        function toggleStatusMenu() {
+            const menu = document.getElementById('statusMenu');
+            menu.style.display = menu.style.display === "block" ? "none" : "block";
+        }
+
+        function updateCircleColor(state) {
+            const circle = document.getElementById('statusCircle');
+            if (state === 'ready') circle.style.backgroundColor = 'green';
+            else if (state === 'blocked') circle.style.backgroundColor = 'red';
+            else circle.style.backgroundColor = 'grey'; // Default: in_progress
+        }
+
+        async function setStatus(state) {
+            // Update UI immediately
+            updateCircleColor(state);
+            document.getElementById('statusMenu').style.display = "none";
+
+            // Send to DB
+            await fetch('/api/request/update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    id: currentRequestId,
+                    field: 'status_state',
+                    value: state
+                })
+            });
+        }
+
+        // 3. Auto-Save Notes Logic (Debounced)
+        function autoSaveNotes() {
+            const text = document.getElementById('m_notes').value;
+            const statusLabel = document.getElementById('save_status');
+            
+            statusLabel.style.display = "inline";
+            statusLabel.innerText = "Saving...";
+            statusLabel.style.color = "#999";
+
+            // Clear previous timer if user keeps typing
+            clearTimeout(saveTimeout);
+
+            // Set new timer (wait 1 second after typing stops)
+            saveTimeout = setTimeout(async () => {
+                await fetch('/api/request/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        id: currentRequestId,
+                        field: 'notes',
+                        value: text
+                    })
+                });
+                statusLabel.innerText = "Saved to DB";
+                statusLabel.style.color = "green";
+            }, 1000);
+        }
+        
+        // Close modal if clicking outside
+        window.onclick = function(event) {
+            if (event.target == document.getElementById('requestModal')) {
+                closeModal();
+            }
+        }
+    </script>
 {% endblock %}

@@ -1,22 +1,147 @@
 {% extends "base.html" %}
+
 {% block content %}
-    <h2>Equipment Inventory</h2>
-    <table>
-        <tr>
-            <th>Name</th>
-            <th>Serial No</th>
-            <th>Dept</th>
-            <th>Location</th>
-            <th>Status</th>
-        </tr>
-        {% for item in equipment %}
-        <tr>
-            <td>{{ item.name }}</td>
-            <td>{{ item.serial_number }}</td>
-            <td>{{ item.department }}</td>
-            <td>{{ item.location }}</td>
-            <td>{{ item.health }}% ({{ item.status }})</td>
-        </tr>
-        {% endfor %}
-    </table>
+
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <button onclick="openAddModal()" 
+                style="background: #1a1a1a; color: white; border: none; padding: 10px 20px; 
+                       border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px;">
+            + New Equipment
+        </button>
+
+        <form action="{{ url_for('pages.equipment') }}" method="GET" style="display: flex;">
+            <input type="text" name="q" placeholder="Search Serial or Name..." 
+                   style="padding: 10px; border: 1px solid #ccc; border-radius: 5px 0 0 5px; width: 250px;">
+            <button type="submit" 
+                    style="padding: 10px 15px; background: #ddd; border: 1px solid #ccc; border-left: none; 
+                           border-radius: 0 5px 5px 0; cursor: pointer;">🔍</button>
+        </form>
+    </div>
+
+    <div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background: #f9f9f9;">
+                <tr>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Name</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Serial No</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Category</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Dept</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Owner (Employee)</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Technician</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Company</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if equipment|length == 0 %}
+                <tr>
+                    <td colspan="7" style="padding: 20px; text-align: center; color: #999;">No equipment found. Add some!</td>
+                </tr>
+                {% endif %}
+                
+                {% for item in equipment %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 15px;"><strong>{{ item.name }}</strong></td>
+                    <td style="padding: 15px; color: #555;">{{ item.serial_number }}</td>
+                    <td style="padding: 15px;">
+                        <span style="background: #e6f2ff; color: #0056b3; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                            {{ item.category }}
+                        </span>
+                    </td>
+                    <td style="padding: 15px;">{{ item.department }}</td>
+                    <td style="padding: 15px;">{{ item.employee_owner }}</td>
+                    <td style="padding: 15px;">{{ item.technician_name }}</td>
+                    <td style="padding: 15px;">{{ item.company }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="addModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                              background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000;">
+        
+        <div style="background: white; width: 500px; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); position: relative;">
+            
+            <h2 style="margin-top: 0;">Add New Equipment</h2>
+            <span onclick="closeAddModal()" style="position: absolute; top: 20px; right: 20px; cursor: pointer; font-size: 24px;">&times;</span>
+
+            <form action="/api/equipment/add" method="POST">
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Equipment Name</label>
+                        <input type="text" name="name" required placeholder="e.g. Dell Latitude 5400" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Serial Number</label>
+                        <input type="text" name="serial_number" required placeholder="e.g. SN-998877" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Category</label>
+                        <select name="category" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                            <option value="Electronics">Electronics</option>
+                            <option value="Machinery">Machinery</option>
+                            <option value="Vehicle">Vehicle</option>
+                            <option value="Furniture">Furniture</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Department</label>
+                        <input type="text" name="department" placeholder="e.g. Sales" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Employee (Owner)</label>
+                        <input type="text" name="employee" placeholder="Who uses this?" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Technician</label>
+                        <select name="technician" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                            <option value="Unassigned">Unassigned</option>
+                            {% for tech in technicians %}
+                                <option value="{{ tech.name }}">{{ tech.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Company</label>
+                    <input type="text" name="company" placeholder="e.g. My Company (San Francisco)" 
+                           style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+
+                <button type="submit" 
+                        style="width: 100%; padding: 10px; background: #1a1a1a; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
+                    Add Equipment
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openAddModal() {
+            document.getElementById('addModal').style.display = 'flex';
+        }
+        function closeAddModal() {
+            document.getElementById('addModal').style.display = 'none';
+        }
+        
+        // Close if clicked outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('addModal');
+            if (event.target == modal) {
+                closeAddModal();
+            }
+        }
+    </script>
+
 {% endblock %}
