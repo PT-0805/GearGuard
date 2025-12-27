@@ -1,185 +1,293 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h2>Recent Requests</h2>
-    <table class="request-table">
-        <thead>
+    <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+        <div style="flex: 1; padding: 20px; background: #ffe5e5; border: 1px solid #ffcccc; border-radius: 10px; text-align: center;">
+            <h3 style="margin:0; color:#cc0000;">Critical Equipment</h3>
+            <h1 style="margin:10px 0; font-size:32px;">{{ kpi.critical_count }} Units</h1>
+            <small>(Health < 30%)</small>
+        </div>
+        <div style="flex: 1; padding: 20px; background: #e6f2ff; border: 1px solid #cce5ff; border-radius: 10px; text-align: center;">
+            <h3 style="margin:0; color:#0056b3;">Technician Load</h3>
+            <h1 style="margin:10px 0; font-size:32px;">{{ kpi.tech_load }}%</h1>
+            <small>Utilized</small>
+        </div>
+        <div style="flex: 1; padding: 20px; background: #e6fffa; border: 1px solid #ccf2eb; border-radius: 10px; text-align: center;">
+            <h3 style="margin:0; color:#006644;">Open Requests</h3>
+            <h1 style="margin:10px 0; font-size:32px;">{{ kpi.open_requests }} Pending</h1>
+            <small>{{ kpi.overdue }} Overdue</small>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+        <button onclick="openRequestModal()" style="background: white; border: 2px solid #333; padding: 8px 25px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 3px 3px 0px #ccc;">New</button>
+        <input type="text" placeholder="🔍 Search..." style="padding: 10px; width: 350px; border: 1px solid #ddd; border-radius: 6px;">
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #eee;">
+        <thead style="background: #f9f9f9;">
             <tr>
-                <th>Subject</th>
-                <th>Equipment</th>
-                <th>Stage</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Subjects</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Employee</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Technician</th>
+                <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Stage</th>
             </tr>
         </thead>
         <tbody>
             {% for req in requests %}
-            <tr onclick="openModal('{{ req._id }}')" style="cursor: pointer;">
-                <td>{{ req.subject }}</td>
-                <td>{{ req.equipment_name }}</td>
-                <td>{{ req.stage }}</td>
+            <tr onclick="openRequestModal('{{ req._id }}')" style="cursor: pointer; border-bottom: 1px dashed #eee;" onmouseover="this.style.background='#fcfcfc'" onmouseout="this.style.background='white'">
+                <td style="padding: 12px;">{{ req.subject }}</td>
+                <td style="padding: 12px;">{{ req.employee }}</td>
+                <td style="padding: 12px;">{{ req.technician }}</td>
+                <td style="padding: 12px;"><span style="background: #eee; padding: 4px 10px; border-radius: 12px; font-size: 12px;">{{ req.stage }}</span></td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <div id="requestModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;">
-        
-        <div style="background: white; width: 850px; padding: 30px; border-radius: 8px; box-shadow: 0 4px 25px rgba(0,0,0,0.2); position: relative;">
+    <div id="smartModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;">
+        <div style="background: white; width: 900px; padding: 30px; border-radius: 12px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
             
-            <span onclick="closeModal()" style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999;">&times;</span>
-
-            <div style="border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <h1 id="m_subject" style="margin: 0;">Loading...</h1>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                <div><small style="color: #666;">Maintenance Requests /</small><h2 id="m_header_title" style="margin: 5px 0;">New Request</h2></div>
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div style="font-size: 13px; color: #888; background: #f4f4f4; padding: 5px 15px; border-radius: 20px;">New Request > In Progress > Repaired > Scrap</div>
+                    <span onclick="closeModal()" style="cursor: pointer; font-size: 24px;">&times;</span>
                 </div>
+            </div>
+
+            <div style="position: absolute; right: 40px; top: 110px; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 20;">
+                <div id="statusCircle" onclick="toggleStatusMenu()" style="width: 22px; height: 22px; border-radius: 50%; background: grey; cursor: pointer; border: 2px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.2);"></div>
+                <button onclick="unlockForm()" id="editLockBtn" style="background: none; border: none; cursor: pointer; font-size: 20px;">🔓</button>
+                <div id="statusMenu" style="display: none; position: absolute; top: 35px; right: 0; background: white; border: 1px solid #ddd; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 170px; border-radius: 8px; overflow: hidden;">
+                    <div onclick="updateStatus('grey')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: grey;"></div> In Progress</div>
+                    <div onclick="updateStatus('red')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div> Blocked</div>
+                    <div onclick="updateStatus('green')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: green;"></div> Ready for Next Stage</div>
+                </div>
+            </div>
+
+            <form id="requestForm" action="/api/request/save" method="POST">
+                <input type="hidden" id="f_request_id" name="request_id">
                 
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <div style="position: relative;">
-                        <div id="statusCircle" onclick="toggleStatusMenu()" 
-                             style="width: 20px; height: 20px; border-radius: 50%; background-color: grey; cursor: pointer; border: 2px solid #ddd;">
-                        </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                    <div class="col-left">
+                        <label style="display:block; font-size:12px; font-weight:bold;">Subject?</label>
+                        <input type="text" id="f_subject" name="subject" required style="width: 100%; font-size: 24px; font-weight: bold; border: none; border-bottom: 1px solid #ddd; margin-bottom: 20px; background: transparent;">
+                        <p style="font-size:14px;">Created By: <span style="font-weight:bold;">{{ user }}</span></p>
                         
-                        <div id="statusMenu" style="display: none; position: absolute; top: 30px; right: 0; background: white; border: 1px solid #ccc; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 180px; overflow: hidden;">
-                            <div onclick="setStatus('in_progress')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; hover:bg-gray-100;">
-                                <div style="width: 10px; height: 10px; border-radius: 50%; background: grey;"></div> In Progress
-                            </div>
-                            <div onclick="setStatus('blocked')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
-                                <div style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div> Blocked
-                            </div>
-                            <div onclick="setStatus('ready')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;">
-                                <div style="width: 10px; height: 10px; border-radius: 50%; background: green;"></div> Ready for Next Stage
-                            </div>
+                        <label style="display:block; font-size:12px; font-weight:bold; margin-top:15px;">Maintenance For:</label>
+                        <select id="f_equipment" name="equipment" required class="modal-input">
+                            {% for eq in equipment_options %}<option value="{{ eq._id }}">{{ eq.name }} / {{ eq.serial_number }}</option>{% endfor %}
+                        </select>
+
+                        <div style="margin-top: 15px;">
+                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Maintenance Type:</label>
+                            <input type="radio" name="m_type" id="type_corrective" value="Corrective" checked> Corrective
+                            <input type="radio" name="m_type" id="type_preventive" value="Preventive" style="margin-left: 15px;"> Preventive
                         </div>
                     </div>
 
-                    <div style="background: #f9f9f9; padding: 5px 15px; border-radius: 20px; border: 1px solid #ddd; font-size: 14px; color: #666;">
-                        New Request > <b>In Progress</b> > Repaired > Scrap
+                    <div class="col-right" style="border-left: 1px solid #eee; padding-left: 40px;">
+                        <label class="field-label">Team</label>
+                        <select name="team" id="f_team" class="modal-input">
+                            <option value="">Select Team</option>
+                            {% for team in team_options %}<option value="{{ team.name }}">{{ team.name }}</option>{% endfor %}
+                        </select>
+
+                        <label class="field-label">Technician</label>
+                        <select name="technician" id="f_tech" class="modal-input">
+                            <option value="">Select Technician</option>
+                            {% for tech in technician_options %}<option value="{{ tech.name }}">{{ tech.name }}</option>{% endfor %}
+                        </select>
+
+                        <label class="field-label">Scheduled Date</label>
+                        <input type="datetime-local" id="f_sched_date" name="scheduled_date" class="modal-input">
+
+                        <label class="field-label">Duration</label>
+                        <input type="text" id="f_duration" name="duration" placeholder="HH:MM" class="modal-input">
+
+                        <label class="field-label">Priority</label>
+                        <input type="hidden" id="f_priority" name="priority" value="low">
+                        <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                            <div class="priority-icon selected" id="prio_low" onclick="setPriority('low', this)" title="Low">♦</div>
+                            <div class="priority-icon" id="prio_medium" onclick="setPriority('medium', this)" title="Medium">♦♦</div>
+                            <div class="priority-icon" id="prio_high" onclick="setPriority('high', this)" title="High">♦♦♦</div>
+                        </div>
+
+                        <label class="field-label">Company</label>
+                        <select name="company" id="f_company" class="modal-input">
+                            {% for comp in company_options %}<option value="{{ comp }}">{{ comp }}</option>{% endfor %}
+                        </select>
                     </div>
                 </div>
-            </div>
 
-            <div style="display: flex; gap: 40px; margin-bottom: 20px;">
-                <div style="flex: 1;">
-                    <p><strong>Created By:</strong> <span id="m_employee">...</span></p>
-                    <p><strong>Equipment:</strong> <span id="m_equipment" style="color: #007bff; font-weight: bold;">...</span></p>
-                    <p><strong>Category:</strong> <span id="m_category">...</span></p>
+                <div style="margin-top: 30px;">
+                    <div style="display: flex; gap: 20px; border-bottom: 1px solid #ddd; margin-bottom: 0;">
+                        <div id="tabBtn_notes" class="tab-btn active" onclick="switchTab('notes')">Notes</div>
+                        <div id="tabBtn_instructions" class="tab-btn" onclick="switchTab('instructions')">Instructions</div>
+                    </div>
+                    
+                    <div id="tabContent_notes" class="tab-content" style="display: block;">
+                        <textarea id="f_notes" name="notes" oninput="autoSave('notes')" placeholder="Add internal notes here..." class="modal-textarea"></textarea>
+                    </div>
+                    <div id="tabContent_instructions" class="tab-content" style="display: none;">
+                        <textarea id="f_instructions" name="instructions" oninput="autoSave('instructions')" placeholder="Add instructions..." class="modal-textarea"></textarea>
+                    </div>
+                    <div id="saveLabel" style="font-size: 11px; color: green; text-align: right; margin-top: 5px; min-height: 15px;"></div>
                 </div>
-                <div style="flex: 1;">
-                    <p><strong>Technician:</strong> <span id="m_technician">...</span></p>
-                    <p><strong>Scheduled Date:</strong> <span id="m_date">...</span></p>
+
+                <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <button type="button" id="deleteBtn" onclick="confirmDelete()" style="background: none; border: 1px solid #ff6b6b; color: #ff6b6b; padding: 10px 15px; border-radius: 5px; cursor: pointer; display: none; font-weight: bold;">🗑 Delete Request</button>
+                    
+                    <button type="submit" id="mainSubmitBtn" style="background: #1a1a1a; color: white; padding: 10px 40px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: auto;">Save Request</button>
                 </div>
-            </div>
-
-            <div>
-                <button style="background: none; border: none; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 5px;">Notes</button>
-                <button style="background: none; border: none; color: #999; margin-left: 20px;">Instructions</button>
-                
-                <textarea id="m_notes" 
-                          oninput="autoSaveNotes()" 
-                          placeholder="Type notes here... (Auto-saving)" 
-                          style="width: 100%; height: 80px; margin-top: 15px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: sans-serif; resize: none;"></textarea>
-                <small id="save_status" style="color: green; display: none; margin-top: 5px;">Saved</small>
-            </div>
-
+            </form>
         </div>
     </div>
 
+    <style>
+        .field-label { display:block; font-size:12px; font-weight:bold; margin-bottom:5px; margin-top: 15px; }
+        .modal-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 5px; background: #fff; box-sizing: border-box; }
+        .modal-input:disabled { background: #f9f9f9; color: #555; cursor: not-allowed; }
+        .priority-icon { font-size: 24px; color: #ccc; cursor: pointer; transition: color 0.2s; }
+        .priority-icon.selected { color: #1a1a1a; }
+        .tab-btn { padding: 10px 15px; cursor: pointer; font-weight: bold; color: #888; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: #000; border-bottom: 3px solid #1a1a1a; }
+        .modal-textarea { width: 100%; height: 100px; border: 1px solid #eee; padding: 10px; border-radius: 0 0 4px 4px; resize: none; border-top: none; background: #fcfcfc; box-sizing: border-box; }
+    </style>
+
     <script>
-        let currentRequestId = null;
-        let saveTimeout = null;
+        let activeId = null;
+        let saveTimer;
 
-        // 1. Open Modal & Load Data
-        async function openModal(requestId) {
-            currentRequestId = requestId;
-            const modal = document.getElementById('requestModal');
-            modal.style.display = "flex";
+        async function openRequestModal(id = null) {
+            activeId = id;
+            document.getElementById('smartModal').style.display = 'flex';
+            const submitBtn = document.getElementById('mainSubmitBtn');
+            const editBtn = document.getElementById('editLockBtn');
+            const deleteBtn = document.getElementById('deleteBtn');
+            const idField = document.getElementById('f_request_id');
             
-            // Fetch Data
-            const response = await fetch(`/api/request/${requestId}`);
-            const data = await response.json();
-            
-            // Fill Fields
-            document.getElementById('m_subject').innerText = data.subject;
-            document.getElementById('m_employee').innerText = data.employee;
-            document.getElementById('m_equipment').innerText = data.equipment_name;
-            document.getElementById('m_category').innerText = data.category;
-            document.getElementById('m_technician').innerText = data.technician || "Unassigned";
-            document.getElementById('m_date').innerText = data.scheduled_date || "-";
-            
-            // Fill Notes
-            document.getElementById('m_notes').value = data.notes;
+            document.getElementById('requestForm').reset();
 
-            // Set Status Circle Color
-            updateCircleColor(data.status_state);
+            if(id) {
+                // VIEW MODE
+                idField.value = id;
+                const res = await fetch(`/api/request/${id}`);
+                const data = await res.json();
+                
+                document.getElementById('m_header_title').innerText = data.subject;
+                document.getElementById('f_subject').value = data.subject;
+                document.getElementById('f_equipment').value = data.equipment_id;
+                document.getElementById('f_team').value = data.team || "";
+                document.getElementById('f_tech').value = data.technician || "";
+                document.getElementById('f_sched_date').value = data.scheduled_date || "";
+                document.getElementById('f_duration').value = data.duration || "";
+                document.getElementById('f_company').value = data.company || "";
+                document.getElementById('f_notes').value = data.notes || "";
+                document.getElementById('f_instructions').value = data.instructions || "";
+                
+                if(data.type === "Preventive") document.getElementById('type_preventive').checked = true;
+                else document.getElementById('type_corrective').checked = true;
+
+                setPriorityUI(data.priority || 'low');
+                document.getElementById('statusCircle').style.background = data.status_color || 'grey';
+                
+                editBtn.style.display = 'block'; 
+                deleteBtn.style.display = 'block'; // Show delete
+                submitBtn.style.display = 'none'; 
+                toggleForm(true);
+            } else {
+                // NEW MODE
+                idField.value = "";
+                document.getElementById('m_header_title').innerText = "New Request";
+                setPriorityUI('low');
+                document.getElementById('statusCircle').style.background = 'grey';
+                editBtn.style.display = 'none'; 
+                deleteBtn.style.display = 'none'; // Hide delete
+                submitBtn.style.display = 'block'; 
+                toggleForm(false);
+            }
+            switchTab('notes');
         }
 
-        function closeModal() {
-            document.getElementById('requestModal').style.display = "none";
-            document.getElementById('statusMenu').style.display = "none";
+        function toggleForm(disabled) {
+            const fields = document.querySelectorAll('#requestForm input, #requestForm select, #requestForm textarea');
+            fields.forEach(f => f.disabled = disabled);
+            document.querySelectorAll('.priority-icon').forEach(i => i.style.pointerEvents = disabled ? 'none' : 'auto');
         }
 
-        // 2. Status Circle Logic
-        function toggleStatusMenu() {
-            const menu = document.getElementById('statusMenu');
-            menu.style.display = menu.style.display === "block" ? "none" : "block";
+        function unlockForm() {
+            toggleForm(false);
+            document.getElementById('mainSubmitBtn').style.display = 'block';
+            document.getElementById('editLockBtn').style.display = 'none';
         }
 
-        function updateCircleColor(state) {
-            const circle = document.getElementById('statusCircle');
-            if (state === 'ready') circle.style.backgroundColor = 'green';
-            else if (state === 'blocked') circle.style.backgroundColor = 'red';
-            else circle.style.backgroundColor = 'grey'; // Default: in_progress
+        function closeModal() { document.getElementById('smartModal').style.display = 'none'; }
+
+        function setPriority(val, element) {
+            document.getElementById('f_priority').value = val;
+            document.querySelectorAll('.priority-icon').forEach(i => i.classList.remove('selected'));
+            element.classList.add('selected');
+            if(activeId) autoSaveField('priority', val);
         }
 
-        async function setStatus(state) {
-            // Update UI immediately
-            updateCircleColor(state);
-            document.getElementById('statusMenu').style.display = "none";
-
-            // Send to DB
-            await fetch('/api/request/update', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    id: currentRequestId,
-                    field: 'status_state',
-                    value: state
-                })
-            });
+        function setPriorityUI(val) {
+             document.getElementById('f_priority').value = val;
+             document.querySelectorAll('.priority-icon').forEach(i => i.classList.remove('selected'));
+             if(val === 'low') document.getElementById('prio_low').classList.add('selected');
+             else if(val === 'medium') document.getElementById('prio_medium').classList.add('selected');
+             else if(val === 'high') document.getElementById('prio_high').classList.add('selected');
         }
 
-        // 3. Auto-Save Notes Logic (Debounced)
-        function autoSaveNotes() {
-            const text = document.getElementById('m_notes').value;
-            const statusLabel = document.getElementById('save_status');
-            
-            statusLabel.style.display = "inline";
-            statusLabel.innerText = "Saving...";
-            statusLabel.style.color = "#999";
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tabContent_' + tabName).style.display = 'block';
+            document.getElementById('tabBtn_' + tabName).classList.add('active');
+        }
 
-            // Clear previous timer if user keeps typing
-            clearTimeout(saveTimeout);
-
-            // Set new timer (wait 1 second after typing stops)
-            saveTimeout = setTimeout(async () => {
-                await fetch('/api/request/update', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        id: currentRequestId,
-                        field: 'notes',
-                        value: text
-                    })
-                });
-                statusLabel.innerText = "Saved to DB";
-                statusLabel.style.color = "green";
-            }, 1000);
+        function autoSave(fieldName) { 
+            if(activeId) autoSaveField(fieldName, document.getElementById('f_' + fieldName).value); 
         }
         
-        // Close modal if clicking outside
-        window.onclick = function(event) {
-            if (event.target == document.getElementById('requestModal')) {
-                closeModal();
+        function autoSaveField(field, value) {
+            if(!activeId) return;
+            const label = document.getElementById('saveLabel');
+            label.innerText = "Saving...";
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(async () => {
+                await fetch('/api/request/update', {
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: activeId, field: field, value: value})
+                });
+                label.innerText = "Saved";
+                setTimeout(() => label.innerText = "", 1500);
+            }, 800);
+        }
+
+        function toggleStatusMenu() {
+            const m = document.getElementById('statusMenu');
+            m.style.display = (m.style.display === 'none') ? 'block' : 'none';
+        }
+
+        async function updateStatus(color) {
+            document.getElementById('statusCircle').style.background = color;
+            toggleStatusMenu();
+            if(activeId) autoSaveField('status_color', color);
+        }
+
+        function confirmDelete() {
+            if (activeId && confirm("Are you sure you want to delete this request permanently?")) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/api/request/delete/${activeId}`;
+                document.body.appendChild(form);
+                form.submit();
             }
         }
+
+        window.onclick = function(e) { if(e.target == document.getElementById('smartModal')) closeModal(); }
     </script>
 {% endblock %}
