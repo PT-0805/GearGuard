@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const Auth = () => {
+const Auth = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
@@ -16,14 +16,12 @@ const Auth = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Client-side check before sending
+    // Client-side validation for signup
     if (!isLogin && formData.password !== formData.retype_password) {
       alert("Passwords do not match!");
       return;
     }
 
-    // IMPORTANT: No http://localhost:5000 here! 
-    // Vite proxy will handle /login and /signup automatically.
     const endpoint = isLogin ? '/login' : '/signup';
     
     try {
@@ -34,22 +32,25 @@ const Auth = () => {
           'Accept': 'application/json'
         },
         body: JSON.stringify(formData),
-        // credentials: 'include' is still needed to keep the Flask session cookie
-        credentials: 'include', 
+        credentials: 'include', // Handshake for Flask Sessions
       });
 
       const result = await response.json();
 
       if (response.ok) {
-        alert(isLogin ? "Welcome Back!" : "Account Created Successfully!");
-        // Change this to wherever your dashboard route is
-        window.location.href = '/equipment'; 
+        if (isLogin) {
+          // Tell App.jsx we are logged in and pass the username
+          onLoginSuccess(result.user || "User");
+        } else {
+          alert("Account created! Please log in.");
+          setIsLogin(true);
+        }
       } else {
-        alert(result.error || result.message || "Authentication failed");
+        alert(result.error || "Authentication failed");
       }
     } catch (err) {
       console.error("Auth Error:", err);
-      alert("Could not connect to the server. Check if Flask is running.");
+      alert("Connection failed. Make sure Flask is running on port 5000.");
     }
   };
 
@@ -59,73 +60,145 @@ const Auth = () => {
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+      background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+      fontFamily: "'Inter', sans-serif"
     },
     card: {
-      background: 'rgba(255, 255, 255, 0.05)',
-      backdropFilter: 'blur(10px)',
+      background: 'rgba(255, 255, 255, 0.08)',
+      backdropFilter: 'blur(12px)',
       padding: '40px',
-      borderRadius: '15px',
+      borderRadius: '20px',
       border: '1px solid rgba(255, 255, 255, 0.1)',
-      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
       width: '100%',
-      maxWidth: '380px',
-      color: 'white'
+      maxWidth: '400px',
+      color: '#fff'
+    },
+    title: {
+      textAlign: 'center',
+      fontSize: '28px',
+      fontWeight: '800',
+      marginBottom: '10px',
+      letterSpacing: '-0.5px'
+    },
+    subtitle: {
+      textAlign: 'center',
+      color: '#aaa',
+      fontSize: '14px',
+      marginBottom: '30px'
     },
     input: {
       width: '100%',
-      padding: '12px',
+      padding: '14px',
       margin: '10px 0',
-      borderRadius: '5px',
+      borderRadius: '8px',
       border: 'none',
       background: 'rgba(255, 255, 255, 0.1)',
-      color: 'white',
+      color: '#fff',
+      fontSize: '15px',
       outline: 'none',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      transition: '0.3s'
     },
     button: {
       width: '100%',
-      padding: '12px',
+      padding: '14px',
       background: '#4ecca3',
       color: '#1a1a2e',
       border: 'none',
-      borderRadius: '5px',
+      borderRadius: '8px',
       fontSize: '16px',
+      fontWeight: '700',
+      cursor: 'pointer',
+      marginTop: '20px',
+      transition: 'transform 0.2s, background 0.2s'
+    },
+    toggle: {
+      marginTop: '25px',
+      textAlign: 'center',
+      fontSize: '14px',
+      color: '#ccc'
+    },
+    link: {
+      color: '#4ecca3',
       fontWeight: 'bold',
       cursor: 'pointer',
-      marginTop: '20px'
+      textDecoration: 'none'
     }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2 style={{ textAlign: 'center', marginBottom: '10px' }}>{isLogin ? 'Login' : 'Sign Up'}</h2>
-        <p style={{ textAlign: 'center', fontSize: '14px', color: '#bbb', marginBottom: '20px' }}>
-          Inventory Management System
-        </p>
+        <div style={styles.title}>{isLogin ? 'Welcome Back' : 'Get Started'}</div>
+        <div style={styles.subtitle}>
+          {isLogin ? 'Enter your credentials to access GearGuard' : 'Create an account to manage your equipment'}
+        </div>
 
         <form onSubmit={handleSubmit}>
           {!isLogin && (
-            <input type="text" name="name" placeholder="Full Name" value={formData.name} onChange={handleChange} style={styles.input} required />
+            <input
+              type="text"
+              name="name"
+              placeholder="Full Name"
+              value={formData.name}
+              onChange={handleChange}
+              style={styles.input}
+              required
+            />
           )}
-          <input type="email" name="email" placeholder="Email Address" value={formData.email} onChange={handleChange} style={styles.input} required />
-          <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} style={styles.input} required />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email Address"
+            value={formData.email}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={handleChange}
+            style={styles.input}
+            required
+          />
           {!isLogin && (
-            <input type="password" name="retype_password" placeholder="Confirm Password" value={formData.retype_password} onChange={handleChange} style={styles.input} required />
+            <input
+              type="password"
+              name="retype_password"
+              placeholder="Confirm Password"
+              value={formData.retype_password}
+              onChange={handleChange}
+              style={styles.input}
+              required
+            />
           )}
-          <button type="submit" style={styles.button}>
+
+          <button 
+            type="submit" 
+            style={styles.button}
+            onMouseOver={(e) => e.target.style.background = '#45b393'}
+            onMouseOut={(e) => e.target.style.background = '#4ecca3'}
+          >
             {isLogin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 
-        <p style={{ marginTop: '20px', textAlign: 'center', fontSize: '14px' }}>
-          {isLogin ? "Need an account?" : "Already have an account?"}{' '}
-          <span style={{ color: '#4ecca3', cursor: 'pointer' }} onClick={() => setIsLogin(!isLogin)}>
-            {isLogin ? 'Register' : 'Login'}
+        <div style={styles.toggle}>
+          {isLogin ? "New here? " : "Already have an account? "}
+          <span 
+            style={styles.link} 
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setFormData({name: '', email: '', password: '', retype_password: ''});
+            }}
+          >
+            {isLogin ? 'Create Account' : 'Log In'}
           </span>
-        </p>
+        </div>
       </div>
     </div>
   );
