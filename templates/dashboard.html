@@ -24,35 +24,48 @@
         <input type="text" placeholder="🔍 Search..." style="padding: 10px; width: 350px; border: 1px solid #ddd; border-radius: 6px;">
     </div>
 
-    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; border: 1px solid #eee;">
-        <thead style="background: #f9f9f9;">
-            <tr>
-                <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Subjects</th>
-                <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Employee</th>
-                <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Technician</th>
-                <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Stage</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for req in requests %}
-            <tr onclick="openRequestModal('{{ req._id }}')" style="cursor: pointer; border-bottom: 1px dashed #eee;" onmouseover="this.style.background='#fcfcfc'" onmouseout="this.style.background='white'">
-                <td style="padding: 12px;">{{ req.subject }}</td>
-                <td style="padding: 12px;">{{ req.employee }}</td>
-                <td style="padding: 12px;">{{ req.technician }}</td>
-                <td style="padding: 12px;"><span style="background: #eee; padding: 4px 10px; border-radius: 12px; font-size: 12px;">{{ req.stage }}</span></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background: #f9f9f9;">
+                <tr>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Subjects</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Employee</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Technician</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px dashed #999;">Stage & Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requests %}
+                <tr onclick="openRequestModal('{{ req._id }}')" style="cursor: pointer; border-bottom: 1px dashed #eee;" onmouseover="this.style.background='#fcfcfc'" onmouseout="this.style.background='white'">
+                    <td style="padding: 12px;">{{ req.subject }}</td>
+                    <td style="padding: 12px;">{{ req.employee }}</td>
+                    <td style="padding: 12px;">{{ req.technician }}</td>
+                    <td style="padding: 12px; display: flex; align-items: center; gap: 10px;">
+                        <span class="stage-badge-table">{{ req.stage }}</span>
+                        <div style="width: 10px; height: 10px; border-radius: 50%; background: {{ req.status_color or 'grey' }}; border: 1px solid rgba(0,0,0,0.1);" title="Status Flag"></div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     <div id="smartModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;">
         <div style="background: white; width: 900px; padding: 30px; border-radius: 12px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
             
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-                <div><small style="color: #666;">Maintenance Requests /</small><h2 id="m_header_title" style="margin: 5px 0;">New Request</h2></div>
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <div style="font-size: 13px; color: #888; background: #f4f4f4; padding: 5px 15px; border-radius: 20px;">New Request > In Progress > Repaired > Scrap</div>
-                    <span onclick="closeModal()" style="cursor: pointer; font-size: 24px;">&times;</span>
+                <div><small style="color: #666;">Maintenance /</small><h2 id="m_header_title" style="margin: 5px 0;">New Request</h2></div>
+                
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div id="stg_new" class="stage-step" onclick="updateStage('New Request')">New</div>
+                    <span style="color:#ccc;">></span>
+                    <div id="stg_progress" class="stage-step" onclick="updateStage('In Progress')">In Progress</div>
+                    <span style="color:#ccc;">></span>
+                    <div id="stg_done" class="stage-step" onclick="updateStage('Done')">Done</div>
+                    <span style="color:#ccc;">></span>
+                    <div id="stg_scrap" class="stage-step" onclick="updateStage('Scrap')">Scrap</div>
+                    
+                    <span onclick="closeModal()" style="cursor: pointer; font-size: 24px; margin-left: 20px;">&times;</span>
                 </div>
             </div>
 
@@ -60,28 +73,54 @@
                 <div id="statusCircle" onclick="toggleStatusMenu()" style="width: 22px; height: 22px; border-radius: 50%; background: grey; cursor: pointer; border: 2px solid #fff; box-shadow: 0 0 5px rgba(0,0,0,0.2);"></div>
                 <button onclick="unlockForm()" id="editLockBtn" style="background: none; border: none; cursor: pointer; font-size: 20px;">🔓</button>
                 <div id="statusMenu" style="display: none; position: absolute; top: 35px; right: 0; background: white; border: 1px solid #ddd; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 170px; border-radius: 8px; overflow: hidden;">
-                    <div onclick="updateStatus('grey')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: grey;"></div> In Progress</div>
-                    <div onclick="updateStatus('red')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: red;"></div> Blocked</div>
-                    <div onclick="updateStatus('green')" style="padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: green;"></div> Ready for Next Stage</div>
+                    <div onclick="updateStatus('grey')" class="status-opt"><div class="dot" style="background:grey;"></div> In Progress</div>
+                    <div onclick="updateStatus('red')" class="status-opt"><div class="dot" style="background:red;"></div> Blocked</div>
+                    <div onclick="updateStatus('green')" class="status-opt"><div class="dot" style="background:green;"></div> Ready for Next Stage</div>
                 </div>
             </div>
 
             <form id="requestForm" action="/api/request/save" method="POST">
                 <input type="hidden" id="f_request_id" name="request_id">
+                <input type="hidden" id="f_stage" name="stage" value="New Request">
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
                     <div class="col-left">
-                        <label style="display:block; font-size:12px; font-weight:bold;">Subject?</label>
-                        <input type="text" id="f_subject" name="subject" required style="width: 100%; font-size: 24px; font-weight: bold; border: none; border-bottom: 1px solid #ddd; margin-bottom: 20px; background: transparent;">
+                        <label class="field-label">Subject</label>
+                        <input type="text" id="f_subject" name="subject" required class="title-input">
+                        
                         <p style="font-size:14px;">Created By: <span style="font-weight:bold;">{{ user }}</span></p>
                         
-                        <label style="display:block; font-size:12px; font-weight:bold; margin-top:15px;">Maintenance For:</label>
-                        <select id="f_equipment" name="equipment" required class="modal-input">
-                            {% for eq in equipment_options %}<option value="{{ eq._id }}">{{ eq.name }} / {{ eq.serial_number }}</option>{% endfor %}
+                        <label class="field-label">Maintenance For:</label>
+                        <select id="f_target_type" name="target_type" onchange="toggleMaintenanceTarget()" class="modal-input">
+                            <option value="equipment">Equipment</option>
+                            <option value="work_center">Work Center</option>
                         </select>
 
+                        <div id="container_equipment">
+                            <label class="field-label">Select Equipment</label>
+                            <select id="f_equipment" name="equipment" onchange="autoFillCatalog()" class="modal-input">
+                                <option value="">-- Choose Equipment --</option>
+                                {% for eq in equipment_options %}
+                                <option value="{{ eq._id }}" data-category="{{ eq.category }}">{{ eq.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div id="container_work_center" style="display: none;">
+                            <label class="field-label">Select Work Center</label>
+                            <select id="f_work_center" name="work_center" class="modal-input">
+                                <option value="">-- Choose Work Center --</option>
+                                {% for wc in work_center_options %}
+                                <option value="{{ wc._id }}">{{ wc.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <label class="field-label">Category (Catalog)</label>
+                        <input type="text" id="f_category_display" name="category" readonly class="readonly-input" placeholder="Auto-filled">
+
                         <div style="margin-top: 15px;">
-                            <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:5px;">Maintenance Type:</label>
+                            <label class="field-label" style="margin-top:0;">Maintenance Type:</label>
                             <input type="radio" name="m_type" id="type_corrective" value="Corrective" checked> Corrective
                             <input type="radio" name="m_type" id="type_preventive" value="Preventive" style="margin-left: 15px;"> Preventive
                         </div>
@@ -109,9 +148,9 @@
                         <label class="field-label">Priority</label>
                         <input type="hidden" id="f_priority" name="priority" value="low">
                         <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                            <div class="priority-icon selected" id="prio_low" onclick="setPriority('low', this)" title="Low">♦</div>
-                            <div class="priority-icon" id="prio_medium" onclick="setPriority('medium', this)" title="Medium">♦♦</div>
-                            <div class="priority-icon" id="prio_high" onclick="setPriority('high', this)" title="High">♦♦♦</div>
+                            <div class="priority-icon" id="prio_low" onclick="setPriority('low', this)">♦</div>
+                            <div class="priority-icon" id="prio_medium" onclick="setPriority('medium', this)">♦♦</div>
+                            <div class="priority-icon" id="prio_high" onclick="setPriority('high', this)">♦♦♦</div>
                         </div>
 
                         <label class="field-label">Company</label>
@@ -126,59 +165,98 @@
                         <div id="tabBtn_notes" class="tab-btn active" onclick="switchTab('notes')">Notes</div>
                         <div id="tabBtn_instructions" class="tab-btn" onclick="switchTab('instructions')">Instructions</div>
                     </div>
-                    
                     <div id="tabContent_notes" class="tab-content" style="display: block;">
-                        <textarea id="f_notes" name="notes" oninput="autoSave('notes')" placeholder="Add internal notes here..." class="modal-textarea"></textarea>
+                        <textarea id="f_notes" name="notes" oninput="autoSave('notes')" placeholder="Internal notes..." class="modal-textarea"></textarea>
                     </div>
                     <div id="tabContent_instructions" class="tab-content" style="display: none;">
-                        <textarea id="f_instructions" name="instructions" oninput="autoSave('instructions')" placeholder="Add instructions..." class="modal-textarea"></textarea>
+                        <textarea id="f_instructions" name="instructions" oninput="autoSave('instructions')" placeholder="Instructions..." class="modal-textarea"></textarea>
                     </div>
                     <div id="saveLabel" style="font-size: 11px; color: green; text-align: right; margin-top: 5px; min-height: 15px;"></div>
                 </div>
 
                 <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
-                    <button type="button" id="deleteBtn" onclick="confirmDelete()" style="background: none; border: 1px solid #ff6b6b; color: #ff6b6b; padding: 10px 15px; border-radius: 5px; cursor: pointer; display: none; font-weight: bold;">🗑 Delete Request</button>
-                    
-                    <button type="submit" id="mainSubmitBtn" style="background: #1a1a1a; color: white; padding: 10px 40px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: auto;">Save Request</button>
+                    <button type="button" id="deleteBtn" onclick="confirmDelete()" class="delete-btn">🗑 Delete Request</button>
+                    <button type="submit" id="mainSubmitBtn" class="save-btn">Save Request</button>
                 </div>
             </form>
         </div>
     </div>
 
     <style>
-        .field-label { display:block; font-size:12px; font-weight:bold; margin-bottom:5px; margin-top: 15px; }
-        .modal-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 5px; background: #fff; box-sizing: border-box; }
-        .modal-input:disabled { background: #f9f9f9; color: #555; cursor: not-allowed; }
+        .stage-badge-table { background: #eee; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; }
+        .stage-step { font-size: 12px; color: #888; background: #f4f4f4; padding: 5px 15px; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+        .stage-step:hover { background: #e9e9e9; }
+        .stage-step.active { background: #1a1a1a; color: white; font-weight: bold; }
+        
+        .field-label { display:block; font-size:11px; font-weight:bold; margin-bottom:5px; margin-top: 15px; text-transform: uppercase; color: #666; }
+        .modal-input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 5px; }
+        .title-input { width: 100%; font-size: 24px; font-weight: bold; border: none; border-bottom: 1px solid #ddd; margin-bottom: 10px; background: transparent; }
+        .readonly-input { width:100%; padding:8px; border:1px solid #eee; background:#f9f9f9; color:#666; border-radius:4px; font-size: 13px; }
+        .status-opt { padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+        .status-opt:hover { background: #f9f9f9; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
         .priority-icon { font-size: 24px; color: #ccc; cursor: pointer; transition: color 0.2s; }
         .priority-icon.selected { color: #1a1a1a; }
         .tab-btn { padding: 10px 15px; cursor: pointer; font-weight: bold; color: #888; border-bottom: 3px solid transparent; }
         .tab-btn.active { color: #000; border-bottom: 3px solid #1a1a1a; }
         .modal-textarea { width: 100%; height: 100px; border: 1px solid #eee; padding: 10px; border-radius: 0 0 4px 4px; resize: none; border-top: none; background: #fcfcfc; box-sizing: border-box; }
+        .save-btn { background: #1a1a1a; color: white; padding: 10px 40px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: auto; }
+        .delete-btn { background: none; border: 1px solid #ff6b6b; color: #ff6b6b; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
     </style>
 
     <script>
         let activeId = null;
         let saveTimer;
 
+        // Toggle Stage UI
+        function updateStage(stageName) {
+            document.getElementById('f_stage').value = stageName;
+            document.querySelectorAll('.stage-step').forEach(el => el.classList.remove('active'));
+            if(stageName === 'New Request') document.getElementById('stg_new').classList.add('active');
+            if(stageName === 'In Progress') document.getElementById('stg_progress').classList.add('active');
+            if(stageName === 'Done') document.getElementById('stg_done').classList.add('active');
+            if(stageName === 'Scrap') document.getElementById('stg_scrap').classList.add('active');
+
+            if(activeId) autoSaveField('stage', stageName);
+        }
+
+        function toggleMaintenanceTarget() {
+            const type = document.getElementById('f_target_type').value;
+            document.getElementById('container_equipment').style.display = (type === 'equipment' ? 'block' : 'none');
+            document.getElementById('container_work_center').style.display = (type === 'work_center' ? 'block' : 'none');
+            if(type === 'work_center') document.getElementById('f_category_display').value = "Work Center Area";
+        }
+
+        function autoFillCatalog() {
+            const eqSelect = document.getElementById('f_equipment');
+            const category = eqSelect.options[eqSelect.selectedIndex].getAttribute('data-category');
+            document.getElementById('f_category_display').value = category || "General";
+        }
+
         async function openRequestModal(id = null) {
             activeId = id;
             document.getElementById('smartModal').style.display = 'flex';
-            const submitBtn = document.getElementById('mainSubmitBtn');
-            const editBtn = document.getElementById('editLockBtn');
-            const deleteBtn = document.getElementById('deleteBtn');
-            const idField = document.getElementById('f_request_id');
-            
             document.getElementById('requestForm').reset();
 
             if(id) {
-                // VIEW MODE
-                idField.value = id;
                 const res = await fetch(`/api/request/${id}`);
                 const data = await res.json();
                 
                 document.getElementById('m_header_title').innerText = data.subject;
                 document.getElementById('f_subject').value = data.subject;
-                document.getElementById('f_equipment').value = data.equipment_id;
+                document.getElementById('f_request_id').value = id;
+                
+                updateStage(data.stage || 'New Request');
+
+                if (data.work_center_id) {
+                    document.getElementById('f_target_type').value = 'work_center';
+                    document.getElementById('f_work_center').value = data.work_center_id;
+                } else {
+                    document.getElementById('f_target_type').value = 'equipment';
+                    document.getElementById('f_equipment').value = data.equipment_id;
+                }
+                toggleMaintenanceTarget();
+
                 document.getElementById('f_team').value = data.team || "";
                 document.getElementById('f_tech').value = data.technician || "";
                 document.getElementById('f_sched_date').value = data.scheduled_date || "";
@@ -186,6 +264,7 @@
                 document.getElementById('f_company').value = data.company || "";
                 document.getElementById('f_notes').value = data.notes || "";
                 document.getElementById('f_instructions').value = data.instructions || "";
+                document.getElementById('f_category_display').value = data.category || "";
                 
                 if(data.type === "Preventive") document.getElementById('type_preventive').checked = true;
                 else document.getElementById('type_corrective').checked = true;
@@ -193,19 +272,19 @@
                 setPriorityUI(data.priority || 'low');
                 document.getElementById('statusCircle').style.background = data.status_color || 'grey';
                 
-                editBtn.style.display = 'block'; 
-                deleteBtn.style.display = 'block'; // Show delete
-                submitBtn.style.display = 'none'; 
+                document.getElementById('editLockBtn').style.display = 'block'; 
+                document.getElementById('deleteBtn').style.display = 'block'; 
+                document.getElementById('mainSubmitBtn').style.display = 'none'; 
                 toggleForm(true);
             } else {
-                // NEW MODE
-                idField.value = "";
                 document.getElementById('m_header_title').innerText = "New Request";
+                updateStage('New Request');
+                toggleMaintenanceTarget();
                 setPriorityUI('low');
                 document.getElementById('statusCircle').style.background = 'grey';
-                editBtn.style.display = 'none'; 
-                deleteBtn.style.display = 'none'; // Hide delete
-                submitBtn.style.display = 'block'; 
+                document.getElementById('editLockBtn').style.display = 'none'; 
+                document.getElementById('deleteBtn').style.display = 'none'; 
+                document.getElementById('mainSubmitBtn').style.display = 'block'; 
                 toggleForm(false);
             }
             switchTab('notes');
@@ -215,79 +294,31 @@
             const fields = document.querySelectorAll('#requestForm input, #requestForm select, #requestForm textarea');
             fields.forEach(f => f.disabled = disabled);
             document.querySelectorAll('.priority-icon').forEach(i => i.style.pointerEvents = disabled ? 'none' : 'auto');
+            document.querySelectorAll('.stage-step').forEach(i => i.style.pointerEvents = disabled ? 'none' : 'auto');
         }
 
-        function unlockForm() {
-            toggleForm(false);
-            document.getElementById('mainSubmitBtn').style.display = 'block';
-            document.getElementById('editLockBtn').style.display = 'none';
-        }
-
+        function unlockForm() { toggleForm(false); document.getElementById('mainSubmitBtn').style.display = 'block'; document.getElementById('editLockBtn').style.display = 'none'; }
         function closeModal() { document.getElementById('smartModal').style.display = 'none'; }
-
-        function setPriority(val, element) {
-            document.getElementById('f_priority').value = val;
-            document.querySelectorAll('.priority-icon').forEach(i => i.classList.remove('selected'));
-            element.classList.add('selected');
-            if(activeId) autoSaveField('priority', val);
-        }
-
-        function setPriorityUI(val) {
-             document.getElementById('f_priority').value = val;
-             document.querySelectorAll('.priority-icon').forEach(i => i.classList.remove('selected'));
-             if(val === 'low') document.getElementById('prio_low').classList.add('selected');
-             else if(val === 'medium') document.getElementById('prio_medium').classList.add('selected');
-             else if(val === 'high') document.getElementById('prio_high').classList.add('selected');
-        }
-
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('tabContent_' + tabName).style.display = 'block';
-            document.getElementById('tabBtn_' + tabName).classList.add('active');
-        }
-
-        function autoSave(fieldName) { 
-            if(activeId) autoSaveField(fieldName, document.getElementById('f_' + fieldName).value); 
-        }
+        function setPriority(val, element) { document.getElementById('f_priority').value = val; document.querySelectorAll('.priority-icon').forEach(i => i.classList.remove('selected')); element.classList.add('selected'); if(activeId) autoSaveField('priority', val); }
+        function setPriorityUI(val) { document.getElementById('f_priority').value = val; document.querySelectorAll('.priority-icon').forEach(i => i.classList.remove('selected')); if(val === 'low') document.getElementById('prio_low').classList.add('selected'); else if(val === 'medium') document.getElementById('prio_medium').classList.add('selected'); else if(val === 'high') document.getElementById('prio_high').classList.add('selected'); }
+        function switchTab(tabName) { document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none'); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tabContent_' + tabName).style.display = 'block'; document.getElementById('tabBtn_' + tabName).classList.add('active'); }
+        function autoSave(fieldName) { if(activeId) autoSaveField(fieldName, document.getElementById('f_' + fieldName).value); }
         
-        function autoSaveField(field, value) {
-            if(!activeId) return;
-            const label = document.getElementById('saveLabel');
-            label.innerText = "Saving...";
-            clearTimeout(saveTimer);
-            saveTimer = setTimeout(async () => {
-                await fetch('/api/request/update', {
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({id: activeId, field: field, value: value})
-                });
-                label.innerText = "Saved";
-                setTimeout(() => label.innerText = "", 1500);
-            }, 800);
+        function autoSaveField(field, value) { 
+            if(!activeId) return; 
+            const label = document.getElementById('saveLabel'); 
+            label.innerText = "Saving..."; 
+            clearTimeout(saveTimer); 
+            saveTimer = setTimeout(async () => { 
+                await fetch('/api/request/update', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: activeId, field: field, value: value}) }); 
+                label.innerText = "Saved"; 
+                setTimeout(() => label.innerText = "", 1500); 
+            }, 800); 
         }
 
-        function toggleStatusMenu() {
-            const m = document.getElementById('statusMenu');
-            m.style.display = (m.style.display === 'none') ? 'block' : 'none';
-        }
-
-        async function updateStatus(color) {
-            document.getElementById('statusCircle').style.background = color;
-            toggleStatusMenu();
-            if(activeId) autoSaveField('status_color', color);
-        }
-
-        function confirmDelete() {
-            if (activeId && confirm("Are you sure you want to delete this request permanently?")) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `/api/request/delete/${activeId}`;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-
+        function toggleStatusMenu() { const m = document.getElementById('statusMenu'); m.style.display = (m.style.display === 'none') ? 'block' : 'none'; }
+        async function updateStatus(color) { document.getElementById('statusCircle').style.background = color; toggleStatusMenu(); if(activeId) autoSaveField('status_color', color); }
+        function confirmDelete() { if (activeId && confirm("Are you sure?")) { const form = document.createElement('form'); form.method = 'POST'; form.action = `/api/request/delete/${activeId}`; document.body.appendChild(form); form.submit(); } }
         window.onclick = function(e) { if(e.target == document.getElementById('smartModal')) closeModal(); }
     </script>
 {% endblock %}

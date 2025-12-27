@@ -28,6 +28,7 @@
         <div class="nav">
             <div class="brand">Maintenance</div>
             <a href="{{ url_for('dashboard.view_dashboard') }}" class="{{ 'active' if active_page == 'dashboard' else '' }}">Dashboard</a>
+            <a href="{{ url_for('pages.kanban') }}" class="{{ 'active' if active_page == 'kanban' else '' }}">KanBan</a>
             <a href="{{ url_for('pages.calendar') }}" class="{{ 'active' if active_page == 'calendar' else '' }}">Calendar</a>
             <a href="{{ url_for('pages.equipment') }}" class="{{ 'active' if active_page == 'equipment' else '' }}">Equipment</a>
             <a href="{{ url_for('pages.teams') }}" class="{{ 'active' if active_page == 'teams' else '' }}">Teams</a>

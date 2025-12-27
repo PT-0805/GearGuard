@@ -1,147 +1,278 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div style="display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+    <button onclick="showTab('equipment')" id="btnTabEq" style="background: #1a1a1a; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+        New Equipment
+    </button>
+    <button onclick="showTab('catalog')" id="btnTabCat" style="background: white; color: #1a1a1a; border: 1px solid #1a1a1a; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+        Category
+    </button>
+</div>
 
+<div id="section_equipment">
     <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-        <button onclick="openAddModal()" 
-                style="background: #1a1a1a; color: white; border: none; padding: 10px 20px; 
-                       border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px;">
-            + New Equipment
-        </button>
-
-        <form action="{{ url_for('pages.equipment') }}" method="GET" style="display: flex;">
-            <input type="text" name="q" placeholder="Search Serial or Name..." 
-                   style="padding: 10px; border: 1px solid #ccc; border-radius: 5px 0 0 5px; width: 250px;">
-            <button type="submit" 
-                    style="padding: 10px 15px; background: #ddd; border: 1px solid #ccc; border-left: none; 
-                           border-radius: 0 5px 5px 0; cursor: pointer;">🔍</button>
-        </form>
+        <button onclick="openEqModal()" style="background: #1a1a1a; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">+ New Equipment</button>
     </div>
 
     <div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
         <table style="width: 100%; border-collapse: collapse;">
             <thead style="background: #f9f9f9;">
                 <tr>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Name</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Serial No</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Category</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Dept</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Owner (Employee)</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Technician</th>
-                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Company</th>
+                    <th style="padding: 15px; text-align: left;">Name</th>
+                    <th style="padding: 15px; text-align: left;">Category</th>
+                    <th style="padding: 15px; text-align: left;">Used By</th>
+                    <th style="padding: 15px; text-align: left;">Location</th>
                 </tr>
             </thead>
             <tbody>
-                {% if equipment|length == 0 %}
-                <tr>
-                    <td colspan="7" style="padding: 20px; text-align: center; color: #999;">No equipment found. Add some!</td>
-                </tr>
-                {% endif %}
-                
                 {% for item in equipment %}
-                <tr style="border-bottom: 1px solid #eee;">
+                <tr onclick="openEqModal('{{ item._id }}')" style="border-bottom: 1px solid #eee; cursor: pointer;" onmouseover="this.style.background='#fcfcfc';" onmouseout="this.style.background='white';">
                     <td style="padding: 15px;"><strong>{{ item.name }}</strong></td>
-                    <td style="padding: 15px; color: #555;">{{ item.serial_number }}</td>
-                    <td style="padding: 15px;">
-                        <span style="background: #e6f2ff; color: #0056b3; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
-                            {{ item.category }}
-                        </span>
-                    </td>
-                    <td style="padding: 15px;">{{ item.department }}</td>
-                    <td style="padding: 15px;">{{ item.employee_owner }}</td>
-                    <td style="padding: 15px;">{{ item.technician_name }}</td>
-                    <td style="padding: 15px;">{{ item.company }}</td>
+                    <td style="padding: 15px;">{{ item.category }}</td>
+                    <td style="padding: 15px;">{{ item.used_by_type }}</td>
+                    <td style="padding: 15px;">{{ item.location or '-' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+</div>
 
-    <div id="addModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                              background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000;">
-        
-        <div style="background: white; width: 500px; padding: 30px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); position: relative;">
-            
-            <h2 style="margin-top: 0;">Add New Equipment</h2>
-            <span onclick="closeAddModal()" style="position: absolute; top: 20px; right: 20px; cursor: pointer; font-size: 24px;">&times;</span>
-
-            <form action="/api/equipment/add" method="POST">
-                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-                    <div style="flex: 1;">
-                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Equipment Name</label>
-                        <input type="text" name="name" required placeholder="e.g. Dell Latitude 5400" 
-                               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Serial Number</label>
-                        <input type="text" name="serial_number" required placeholder="e.g. SN-998877" 
-                               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-                    <div style="flex: 1;">
-                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Category</label>
-                        <select name="category" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                            <option value="Electronics">Electronics</option>
-                            <option value="Machinery">Machinery</option>
-                            <option value="Vehicle">Vehicle</option>
-                            <option value="Furniture">Furniture</option>
-                        </select>
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Department</label>
-                        <input type="text" name="department" placeholder="e.g. Sales" 
-                               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-                    <div style="flex: 1;">
-                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Employee (Owner)</label>
-                        <input type="text" name="employee" placeholder="Who uses this?" 
-                               style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Technician</label>
-                        <select name="technician" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                            <option value="Unassigned">Unassigned</option>
-                            {% for tech in technicians %}
-                                <option value="{{ tech.name }}">{{ tech.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; font-size: 12px; margin-bottom: 5px; font-weight: bold;">Company</label>
-                    <input type="text" name="company" placeholder="e.g. My Company (San Francisco)" 
-                           style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-                </div>
-
-                <button type="submit" 
-                        style="width: 100%; padding: 10px; background: #1a1a1a; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">
-                    Add Equipment
-                </button>
-            </form>
-        </div>
+<div id="section_catalog" style="display: none;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+        <button onclick="openCatModal()" style="background: #1a1a1a; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">+ Create Category</button>
     </div>
 
-    <script>
-        function openAddModal() {
-            document.getElementById('addModal').style.display = 'flex';
-        }
-        function closeAddModal() {
-            document.getElementById('addModal').style.display = 'none';
-        }
-        
-        // Close if clicked outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('addModal');
-            if (event.target == modal) {
-                closeAddModal();
-            }
-        }
-    </script>
+    <div style="background: white; border: 1px solid #eee; border-radius: 12px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead style="background: #f9f9f9;">
+                <tr>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #eee;">Category Name</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #eee;">Responsible</th>
+                    <th style="padding: 15px; text-align: left; border-bottom: 2px solid #eee;">Company</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in catalogs %}
+                <tr onclick="openCatModal('{{ cat._id }}')" style="cursor: pointer; border-bottom: 1px solid #f5f5f5;" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background='white'">
+                    <td style="padding: 15px;"><strong>{{ cat.name }}</strong></td>
+                    <td style="padding: 15px;">{{ cat.responsible }}</td>
+                    <td style="padding: 15px;">{{ cat.company }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
+<div id="eqModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000;">
+    <div style="background: white; width: 850px; padding: 30px; border-radius: 12px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="modalTitle" style="margin:0;">Equipment Details</h2>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button id="editBtn" onclick="enableEditing()" style="background:none; border:none; cursor:pointer; font-size:20px; display:none;">✏️</button>
+                <span onclick="closeModal()" style="cursor: pointer; font-size: 28px;">&times;</span>
+            </div>
+        </div>
+        <form id="eqForm" action="/api/equipment/save" method="POST">
+            <input type="hidden" id="eq_id" name="eq_id">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                <div>
+                    <label class="m-label">Name *</label>
+                    <input type="text" name="name" id="f_name" required class="m-input">
+                    <label class="m-label">Equipment Category *</label>
+                    <div style="display: flex; gap: 5px;">
+                        <select name="category" id="f_category" required class="m-input" style="flex: 1;">
+                            {% for cat in catalogs %}<option value="{{ cat.name }}">{{ cat.name }}</option>{% endfor %}
+                        </select>
+                        <button type="button" onclick="showQuickCat()" id="quickAddCatBtn" style="padding: 0 10px; background: #eee; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">+</button>
+                    </div>
+                    <div id="quickCatUI" style="display: none; margin-top: 10px; background: #fdfdfd; padding: 10px; border: 1px dashed #ccc; border-radius: 4px;">
+                        <input type="text" id="new_cat_name" placeholder="New Category Name" style="width: 70%; padding: 5px; font-size: 12px; border: 1px solid #ddd;">
+                        <button type="button" onclick="saveQuickCat()" style="padding: 5px 10px; background: #1a1a1a; color: white; border: none; border-radius: 3px; font-size: 11px; cursor: pointer;">Add</button>
+                    </div>
+                    <label class="m-label">Company *</label>
+                    <select name="company" id="f_company" required class="m-input">
+                        {% for comp in companies %}<option value="{{ comp }}">{{ comp }}</option>{% endfor %}
+                    </select>
+                    <label class="m-label">Used By (Text) *</label>
+                    <input type="text" name="used_by_type" id="f_used_by" required placeholder="Employee/Dept/Location" class="m-input">
+                    <label class="m-label">Maintenance Team *</label>
+                    <select name="maintenance_team" id="f_team" required class="m-input">
+                        {% for team in teams %}<option value="{{ team.name }}">{{ team.name }}</option>{% endfor %}
+                    </select>
+                    <label class="m-label">Assigned Date</label>
+                    <input type="date" name="assigned_date" id="f_assign" class="m-input">
+                </div>
+                <div style="border-left: 1px solid #eee; padding-left: 30px;">
+                    <label class="m-label">Technician</label>
+                    <select name="technician" id="f_tech" class="m-input">
+                        <option value="">Select Technician</option>
+                        {% for user in users %}<option value="{{ user.name }}">{{ user.name }}</option>{% endfor %}
+                    </select>
+                    <label class="m-label">Employee</label>
+                    <select name="employee" id="f_employee_select" class="m-input">
+                        <option value="">Select Employee</option>
+                        {% for user in users %}<option value="{{ user.name }}">{{ user.name }}</option>{% endfor %}
+                    </select>
+                    <label class="m-label">Scrap Date</label>
+                    <input type="date" name="scrap_date" id="f_scrap" class="m-input">
+                    <label class="m-label">Location</label>
+                    <input type="text" name="location" id="f_location" placeholder="Physical Location" class="m-input">
+                    <label class="m-label">Work Center</label>
+                    <select name="work_center" id="f_wc" class="m-input">
+                        <option value="">Select Work Center</option>
+                        {% for wc in work_centers %}<option value="{{ wc.name }}">{{ wc.name }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top: 20px;"><label class="m-label">Description</label><textarea name="description" id="f_desc" class="m-textarea"></textarea></div>
+            <div style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 15px;">
+                <button type="submit" id="saveBtn" style="padding: 10px 40px; background: #1a1a1a; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="catModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 3000;">
+    <div style="background: white; width: 450px; padding: 30px; border-radius: 12px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="catModalTitle" style="margin:0;">Category Details</h2>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button id="catEditBtn" onclick="enableCatEditing()" style="background:none; border:none; cursor:pointer; font-size:20px; display:none;">✏️</button>
+                <span onclick="closeCatModal()" style="cursor: pointer; font-size: 28px;">&times;</span>
+            </div>
+        </div>
+        <form id="catForm" action="/api/catalog/save" method="POST">
+            <input type="hidden" id="cat_id" name="cat_id">
+            <label class="m-label">Category Name *</label>
+            <input type="text" name="name" id="c_name" required class="m-input">
+            
+            <label class="m-label">Responsible *</label>
+            <input type="text" name="responsible" id="c_responsible" required placeholder="Name of responsible person" class="m-input">
+
+            <label class="m-label">Company *</label>
+            <select name="company" id="c_company" required class="m-input">
+                {% for comp in companies %}<option value="{{ comp }}">{{ comp }}</option>{% endfor %}
+            </select>
+
+            <div style="margin-top: 25px; text-align: right;">
+                <button type="submit" id="catSaveBtn" style="width: 100%; padding: 12px; background: #1a1a1a; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Save Category</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .m-label { display:block; font-size:11px; font-weight:bold; margin-bottom:4px; margin-top:10px; text-transform: uppercase; color: #555; }
+    .m-input { width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; box-sizing: border-box; }
+    .m-input:disabled { background: #f9f9f9; color: #666; border: 1px solid #eee; cursor: not-allowed; }
+    .m-textarea { width: 100%; height: 60px; border: 1px solid #ddd; border-radius: 4px; padding: 10px; resize: none; box-sizing: border-box; }
+    .tab-btn-active { background: #1a1a1a !important; color: white !important; }
+</style>
+
+<script>
+    // TAB SWITCHING
+    function showTab(tab) {
+        if(tab === 'equipment') {
+            document.getElementById('section_equipment').style.display = 'block';
+            document.getElementById('section_catalog').style.display = 'none';
+            document.getElementById('btnTabEq').className = 'tab-btn-active';
+            document.getElementById('btnTabCat').style.background = 'white'; document.getElementById('btnTabCat').style.color = '#1a1a1a';
+        } else {
+            document.getElementById('section_equipment').style.display = 'none';
+            document.getElementById('section_catalog').style.display = 'block';
+            document.getElementById('btnTabCat').className = 'tab-btn-active';
+            document.getElementById('btnTabEq').style.background = 'white'; document.getElementById('btnTabEq').style.color = '#1a1a1a';
+        }
+    }
+
+    // EQUIPMENT MODAL
+    async function openEqModal(id = null) {
+        document.getElementById('eqModal').style.display = 'flex';
+        document.getElementById('eqForm').reset();
+        document.getElementById('eq_id').value = id || "";
+        if (id) {
+            document.getElementById('modalTitle').innerText = "Equipment Details";
+            document.getElementById('editBtn').style.display = 'block';
+            document.getElementById('saveBtn').style.display = 'none';
+            const res = await fetch(`/api/equipment/get/${id}`);
+            const data = await res.json();
+            if (!data.error) {
+                document.getElementById('f_name').value = data.name || "";
+                document.getElementById('f_category').value = data.category || "";
+                document.getElementById('f_company').value = data.company || "";
+                document.getElementById('f_used_by').value = data.used_by_type || "";
+                document.getElementById('f_team').value = data.maintenance_team || "";
+                document.getElementById('f_assign').value = data.assigned_date || "";
+                document.getElementById('f_tech').value = data.technician || "";
+                document.getElementById('f_employee_select').value = data.employee || "";
+                document.getElementById('f_scrap').value = data.scrap_date || "";
+                document.getElementById('f_location').value = data.location || "";
+                document.getElementById('f_wc').value = data.work_center || "";
+                document.getElementById('f_desc').value = data.description || "";
+            }
+            toggleInputs('eqForm', true);
+        } else {
+            document.getElementById('modalTitle').innerText = "New Equipment";
+            document.getElementById('editBtn').style.display = 'none';
+            document.getElementById('saveBtn').style.display = 'block';
+            toggleInputs('eqForm', false);
+        }
+    }
+
+    // CATALOG MODAL
+    async function openCatModal(id = null) {
+        document.getElementById('catModal').style.display = 'flex';
+        document.getElementById('catForm').reset();
+        document.getElementById('cat_id').value = id || "";
+        if(id) {
+            document.getElementById('catModalTitle').innerText = "Category Details";
+            document.getElementById('catEditBtn').style.display = 'block';
+            document.getElementById('catSaveBtn').style.display = 'none';
+            const res = await fetch(`/api/equipment-categories/${id}`);
+            const data = await res.json();
+            document.getElementById('c_name').value = data.name || "";
+            document.getElementById('c_responsible').value = data.responsible || "";
+            document.getElementById('c_company').value = data.company || "";
+            toggleInputs('catForm', true);
+        } else {
+            document.getElementById('catModalTitle').innerText = "New Category";
+            document.getElementById('catEditBtn').style.display = 'none';
+            document.getElementById('catSaveBtn').style.display = 'block';
+            toggleInputs('catForm', false);
+        }
+    }
+
+    function toggleInputs(formId, status) {
+        const all = document.querySelectorAll(`#${formId} input, #${formId} select, #${formId} textarea`);
+        all.forEach(i => i.disabled = status);
+    }
+
+    function enableEditing() { toggleInputs('eqForm', false); document.getElementById('saveBtn').style.display = 'block'; document.getElementById('editBtn').style.display = 'none'; }
+    function enableCatEditing() { toggleInputs('catForm', false); document.getElementById('catSaveBtn').style.display = 'block'; document.getElementById('catEditBtn').style.display = 'none'; }
+    function closeModal() { document.getElementById('eqModal').style.display = 'none'; }
+    function closeCatModal() { document.getElementById('catModal').style.display = 'none'; }
+    function showQuickCat() { const ui = document.getElementById('quickCatUI'); ui.style.display = (ui.style.display === 'none') ? 'block' : 'none'; }
+
+    async function saveQuickCat() {
+        const name = document.getElementById('new_cat_name').value;
+        if (!name) return alert("Please enter a category name");
+        try {
+            const response = await fetch('/api/equipment-categories/quick-add', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            });
+            const result = await response.json();
+            if (result.success) {
+                const select = document.getElementById('f_category');
+                const opt = document.createElement('option');
+                opt.value = result.name; opt.innerHTML = result.name; opt.selected = true;
+                select.appendChild(opt);
+                document.getElementById('new_cat_name').value = ""; showQuickCat();
+            } else { alert(result.error); }
+        } catch (err) { console.error(err); }
+    }
+</script>
 {% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<div class="kanban-container">
+    {% for stage, items in board.items() %}
+    <div class="kanban-column">
+        <div class="column-header">
+            <h3>{{ stage }}</h3>
+            <span class="count-badge">{{ items|length }}</span>
+        </div>
+        
+        <div class="column-body" id="{{ stage.replace(' ', '_') }}" data-stage="{{ stage }}">
+            {% for req in items %}
+            <div class="kanban-card" data-id="{{ req._id }}" onclick="window.location.href='/dashboard?open={{ req._id }}'">
+                <div class="card-subject">{{ req.subject }}</div>
+                <div class="card-product">{{ req.equipment_name or req.work_center_name or 'General Maintenance' }}</div>
+                
+                <div class="card-footer">
+                    <div class="priority-dot {{ req.priority }}"></div>
+                    <div class="tech-avatar" title="{{ req.technician }}">
+                        {{ req.technician[:1]|upper if req.technician else '?' }}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+    .kanban-container { display: flex; gap: 20px; align-items: flex-start; overflow-x: auto; padding-bottom: 20px; }
+    .kanban-column { background: #f4f5f7; border-radius: 10px; min-width: 300px; max-width: 300px; display: flex; flex-direction: column; max-height: 80vh; }
+    
+    .column-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+    .column-header h3 { margin: 0; font-size: 14px; text-transform: uppercase; color: #5e6c84; letter-spacing: 0.5px; }
+    .count-badge { background: #dfe1e6; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
+    
+    .column-body { padding: 10px; flex-grow: 1; min-height: 100px; overflow-y: auto; }
+    
+    .kanban-card { 
+        background: white; border-radius: 6px; padding: 12px; margin-bottom: 10px; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12); cursor: grab; transition: transform 0.1s;
+    }
+    .kanban-card:active { cursor: grabbing; transform: scale(1.02); }
+    
+    .card-subject { font-weight: 600; font-size: 14px; margin-bottom: 5px; color: #172b4d; }
+    .card-product { font-size: 12px; color: #6b778c; margin-bottom: 12px; }
+    
+    .card-footer { display: flex; justify-content: space-between; align-items: center; }
+    
+    /* Technician Avatar Style */
+    .tech-avatar { 
+        width: 24px; height: 24px; border-radius: 50%; background: #0052cc; color: white; 
+        display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold;
+    }
+    
+    .priority-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .priority-dot.high { background: #ff5630; }
+    .priority-dot.medium { background: #ffab00; }
+    .priority-dot.low { background: #36b37e; }
+
+    /* Sortable Placeholder */
+    .ghost-card { opacity: 0.4; background: #c1c7d0 !important; border: 2px dashed #4c9aff; }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const columns = ['New_Request', 'In_Progress', 'Done', 'Scrap'];
+        
+        columns.forEach(colId => {
+            const el = document.getElementById(colId);
+            Sortable.create(el, {
+                group: 'kanban',
+                ghostClass: 'ghost-card',
+                animation: 150,
+                onEnd: async function (evt) {
+                    const itemEl = evt.item; 
+                    const newStage = evt.to.getAttribute('data-stage');
+                    const requestId = itemEl.getAttribute('data-id');
+
+                    // API call to update the stage in MongoDB
+                    await fetch('/api/kanban/move', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: requestId,
+                            new_stage: newStage
+                        })
+                    });
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -10,32 +10,180 @@ def check_login():
 
 @pages_bp.route('/equipment')
 def equipment():
-    if not check_login(): return redirect(url_for('auth.home'))
+    if 'user' not in session: return redirect(url_for('auth.home'))
     
-    # 1. Handle Search Query
-    query = request.args.get('q', '')
-    search_filter = {}
-    if query:
-        # Search by name or serial number (case-insensitive)
-        search_filter = {
-            "$or": [
-                {"name": {"$regex": query, "$options": "i"}},
-                {"serial_number": {"$regex": query, "$options": "i"}}
-            ]
-        }
-
-    # 2. Fetch Data
-    equipment_list = list(db.equipment.find(search_filter))
+    # 1. Fetch Data for Tables
+    equipment_list = list(db.equipment.find())
+    catalog_list = list(db.equipment_categories.find())
     
-    # Fetch technicians for the dropdown in the "New Equipment" modal
-    # Assuming technicians have role="Technician" or belong to a team
-    # For now, we just fetch all users to keep it simple, or filter if you have roles
-    technicians = list(db.users.find()) 
+    # 2. Fetch Data for Dropdowns
+    teams = list(db.teams.find())
+    users = list(db.users.find())
+    work_centers = list(db.work_centers.find())
+    
+    # 3. Define the Company List (This was missing!)
+    companies = [
+        "My Company (San Francisco)", 
+        "My Company (New York)", 
+        "Global Logistics", 
+        "Tech Hub HQ"
+    ]
 
     return render_template('equipment.html', 
-                           equipment=equipment_list, 
-                           technicians=technicians,
+                           equipment=equipment_list,
+                           catalogs=catalog_list,
+                           teams=teams,
+                           users=users,
+                           work_centers=work_centers,
+                           companies=companies, # <--- Added this
                            active_page='equipment')
+
+# --- API FOR CATALOG SAVING ---
+@pages_bp.route('/api/catalog/save', methods=['POST'])
+def save_catalog():
+    if 'user' not in session: return redirect(url_for('auth.home'))
+    cat_id = request.form.get('cat_id')
+    data = {
+        "name": request.form.get('name'),
+        "responsible": request.form.get('responsible'),
+        "company": request.form.get('company')
+    }
+    if cat_id:
+        db.equipment_categories.update_one({"_id": ObjectId(cat_id)}, {"$set": data})
+    else:
+        db.equipment_categories.insert_one(data)
+    return redirect(url_for('pages.equipment'))
+
+@pages_bp.route('/api/equipment/save', methods=['POST'])
+def save_equipment():
+    if 'user' not in session: return redirect(url_for('auth.home'))
+    
+    eq_id = request.form.get('eq_id')
+    scrap_date = request.form.get('scrap_date')
+    
+    data = {
+        "name": request.form.get('name'),
+        "category": request.form.get('category'),
+        "company": request.form.get('company'),
+        "used_by_type": request.form.get('used_by_type'), # Employee | Location | Department
+        "maintenance_team": request.form.get('maintenance_team'),
+        "assigned_date": request.form.get('assigned_date'),
+        "technician": request.form.get('technician'),
+        "employee": request.form.get('employee'),
+        "scrap_date": scrap_date,
+        "location": request.form.get('location'),
+        "work_center": request.form.get('work_center'),
+        "description": request.form.get('description'),
+        "status": "Scrapped" if scrap_date else "Active" # Logic: Scrap Date sets status
+    }
+
+    if eq_id and eq_id != "":
+        db.equipment.update_one({"_id": ObjectId(eq_id)}, {"$set": data})
+    else:
+        db.equipment.insert_one(data)
+        
+    return redirect(url_for('pages.equipment'))
+@pages_bp.route('/api/equipment/get/<eq_id>')
+def get_single_equipment(eq_id):
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    try:
+        # Fetch data by ID
+        item = db.equipment.find_one({"_id": ObjectId(eq_id)})
+        if item:
+            item['_id'] = str(item['_id'])
+            return jsonify(item)
+        return jsonify({"error": "Not found"}), 404
+    except:
+        return jsonify({"error": "Invalid ID"}), 400
+    
+# --- EQUIPMENT CATEGORY ROUTES ---
+
+@pages_bp.route('/equipment-categories')
+def equipment_categories():
+    if 'user' not in session: return redirect(url_for('auth.home'))
+    # Fetch all categories from the 'equipment_categories' collection
+    categories = list(db.equipment_categories.find())
+    return render_template('equipment_categories.html', categories=categories, active_page='equipment_categories')
+
+@pages_bp.route('/api/equipment-categories/save', methods=['POST'])
+def save_category():
+    if 'user' not in session: return redirect(url_for('auth.home'))
+    
+    cat_id = request.form.get('cat_id')
+    data = {
+        "name": request.form.get('name'),
+        "maintenance_team": request.form.get('maintenance_team'),
+        "description": request.form.get('description')
+    }
+
+    if cat_id and cat_id != "":
+        db.equipment_categories.update_one({"_id": ObjectId(cat_id)}, {"$set": data})
+    else:
+        db.equipment_categories.insert_one(data)
+        
+    return redirect(url_for('pages.equipment_categories'))
+
+@pages_bp.route('/api/equipment-categories/<cat_id>')
+def get_category_details(cat_id):
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    category = db.equipment_categories.find_one({"_id": ObjectId(cat_id)})
+    if category:
+        category['_id'] = str(category['_id'])
+        return jsonify(category)
+    return jsonify({"error": "Not found"}), 404
+
+@pages_bp.route('/kanban')
+def kanban():
+    if 'user' not in session: return redirect(url_for('auth.home'))
+    
+    # Fetch all requests
+    all_reqs = list(db.requests.find())
+    
+    # Group requests by stage for the columns
+    board = {
+        "New Request": [r for r in all_reqs if r.get('stage') == "New Request"],
+        "In Progress": [r for r in all_reqs if r.get('stage') == "In Progress"],
+        "Done": [r for r in all_reqs if r.get('stage') == "Done"],
+        "Scrap": [r for r in all_reqs if r.get('stage') == "Scrap"]
+    }
+    
+    return render_template('kanban.html', board=board, active_page='kanban')
+
+@pages_bp.route('/api/kanban/move', methods=['POST'])
+def move_request():
+    if 'user' not in session: return jsonify({"success": False}), 401
+    
+    data = request.json
+    db.requests.update_one(
+        {"_id": ObjectId(data['id'])},
+        {"$set": {"stage": data['new_stage']}}
+    )
+    return jsonify({"success": True})
+
+@pages_bp.route('/api/equipment-categories/delete/<cat_id>', methods=['POST'])
+def delete_category(cat_id):
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    db.equipment_categories.delete_one({"_id": ObjectId(cat_id)})
+    return redirect(url_for('pages.equipment_categories'))
+
+@pages_bp.route('/api/equipment-categories/quick-add', methods=['POST'])
+def quick_add_category():
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    
+    data = {
+        "name": request.json.get('name'),
+        "maintenance_team": "Internal Maintenance", # Default for quick add
+        "description": "Quickly added via Equipment form"
+    }
+    
+    # Avoid duplicates
+    existing = db.equipment_categories.find_one({"name": data['name']})
+    if not existing:
+        new_id = db.equipment_categories.insert_one(data).inserted_id
+        return jsonify({"success": True, "id": str(new_id), "name": data['name']})
+    
+    return jsonify({"success": False, "error": "Category already exists"})
+
 
 @pages_bp.route('/calendar')
 def calendar():
