@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+    <button onclick="openWCModal()" style="background: #1a1a1a; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">+ New Work Center</button>
+</div>
+
+<div style="background: white; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+    <table style="width: 100%; border-collapse: collapse;">
+        <thead style="background: #f9f9f9;">
+            <tr>
+                <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Name</th>
+                <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Code</th>
+                <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Capacity</th>
+                <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">OEE Target</th>
+                <th style="padding: 15px; text-align: left; border-bottom: 2px solid #ddd;">Cost/Hr</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for wc in work_centers %}
+            <tr onclick="openWCModal('{{ wc._id }}')" style="border-bottom: 1px solid #eee; cursor: pointer;" onmouseover="this.style.background='#fcfcfc';" onmouseout="this.style.background='white';">
+                <td style="padding: 15px;"><strong>{{ wc.name }}</strong></td>
+                <td style="padding: 15px;">{{ wc.code }}</td>
+                <td style="padding: 15px;">{{ wc.capacity }}</td>
+                <td style="padding: 15px;">{{ wc.oee_target }}%</td>
+                <td style="padding: 15px;">{{ wc.cost_per_hour }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" style="padding: 20px; text-align: center; color: #999;">No work centers defined.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div id="wcModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 2000;">
+    <div style="background: white; width: 650px; padding: 30px; border-radius: 12px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="modalTitle" style="margin:0;">Work Center Details</h2>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button id="editBtn" onclick="enableEditing()" style="background:none; border:none; cursor:pointer; font-size:20px; display:none;">✏️</button>
+                <span onclick="closeModal()" style="cursor: pointer; font-size: 28px;">&times;</span>
+            </div>
+        </div>
+
+        <form id="wcForm" action="/api/work-centers/save" method="POST">
+            <input type="hidden" id="wc_id" name="wc_id">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label class="m-label">Work Center Name</label>
+                    <input type="text" name="name" id="f_name" required class="m-input">
+                    
+                    <label class="m-label">Code</label>
+                    <input type="text" name="code" id="f_code" class="m-input">
+                    
+                    <label class="m-label">Tag</label>
+                    <input type="text" name="tag" id="f_tag" class="m-input">
+
+                    <label class="m-label">Alternative Work Center</label>
+                    <input type="text" name="alt_wc" id="f_alt_wc" class="m-input">
+                </div>
+                <div style="border-left: 1px solid #eee; padding-left: 20px;">
+                    <label class="m-label">Cost per Hour</label>
+                    <input type="number" name="cost_per_hour" id="f_cost" class="m-input" step="0.01">
+                    
+                    <label class="m-label">Capacity</label>
+                    <input type="number" name="capacity" id="f_cap" class="m-input">
+                    
+                    <label class="m-label">Time Efficiency (%)</label>
+                    <input type="number" name="time_efficiency" id="f_eff" class="m-input">
+
+                    <label class="m-label">OEE Target (%)</label>
+                    <input type="number" name="oee_target" id="f_oee" class="m-input">
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+                <button type="button" id="deleteBtn" onclick="confirmDelete()" style="background:none; border:1px solid #ff6b6b; color:#ff6b6b; padding:10px 20px; border-radius:5px; cursor:pointer; font-weight:bold; display:none;">🗑 Delete</button>
+                <button type="submit" id="saveBtn" style="padding: 10px 40px; background: #1a1a1a; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: auto;">Save Work Center</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .m-label { display:block; font-size:12px; font-weight:bold; margin-bottom:5px; margin-top:12px; }
+    .m-input { width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; box-sizing: border-box; }
+    .m-input:disabled { background: #f9f9f9; color: #666; cursor: not-allowed; border: 1px solid #eee; }
+</style>
+
+<script>
+    async function openWCModal(id = null) {
+        document.getElementById('wcModal').style.display = 'flex';
+        const form = document.getElementById('wcForm');
+        form.reset();
+        document.getElementById('wc_id').value = id || "";
+
+        if (id) {
+            document.getElementById('modalTitle').innerText = "Work Center Details";
+            document.getElementById('editBtn').style.display = 'block';
+            document.getElementById('deleteBtn').style.display = 'block';
+            document.getElementById('saveBtn').style.display = 'none';
+            
+            const res = await fetch(`/api/work-centers/${id}`);
+            const data = await res.json();
+            
+            document.getElementById('f_name').value = data.name;
+            document.getElementById('f_code').value = data.code;
+            document.getElementById('f_tag').value = data.tag;
+            document.getElementById('f_alt_wc').value = data.alt_wc;
+            document.getElementById('f_cost').value = data.cost_per_hour;
+            document.getElementById('f_cap').value = data.capacity;
+            document.getElementById('f_eff').value = data.time_efficiency;
+            document.getElementById('f_oee').value = data.oee_target;
+
+            toggleInputs(true);
+        } else {
+            document.getElementById('modalTitle').innerText = "New Work Center";
+            document.getElementById('editBtn').style.display = 'none';
+            document.getElementById('deleteBtn').style.display = 'none';
+            document.getElementById('saveBtn').style.display = 'block';
+            toggleInputs(false);
+        }
+    }
+
+    function toggleInputs(status) {
+        const inputs = document.querySelectorAll('#wcForm input');
+        inputs.forEach(i => i.disabled = status);
+    }
+
+    function enableEditing() {
+        toggleInputs(false);
+        document.getElementById('saveBtn').style.display = 'block';
+        document.getElementById('editBtn').style.display = 'none';
+    }
+
+    function closeModal() { document.getElementById('wcModal').style.display = 'none'; }
+
+    function confirmDelete() {
+        const id = document.getElementById('wc_id').value;
+        if (id && confirm("Permanently remove this work center?")) {
+            const f = document.createElement('form');
+            f.method = 'POST'; f.action = `/api/work-centers/delete/${id}`;
+            document.body.appendChild(f); f.submit();
+        }
+    }
+
+    window.onclick = function(e) { if(e.target == document.getElementById('wcModal')) closeModal(); }
+</script>
+{% endblock %}

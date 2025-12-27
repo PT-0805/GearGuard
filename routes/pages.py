@@ -139,3 +139,48 @@ def delete_team(team_id):
         return redirect(url_for('pages.teams'))
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+    
+@pages_bp.route('/work-centers')
+def work_centers():
+    if 'user' not in session: return redirect(url_for('auth.home'))
+    # Fetch all work centers from the 'work_centers' collection
+    wc_list = list(db.work_centers.find())
+    return render_template('work_centers.html', work_centers=wc_list, active_page='work_centers')
+
+@pages_bp.route('/api/work-centers/save', methods=['POST'])
+def save_work_center():
+    if 'user' not in session: return redirect(url_for('auth.home'))
+    
+    wc_id = request.form.get('wc_id')
+    data = {
+        "name": request.form.get('name'),
+        "code": request.form.get('code'),
+        "tag": request.form.get('tag'),
+        "alt_wc": request.form.get('alt_wc'),
+        "cost_per_hour": request.form.get('cost_per_hour'),
+        "capacity": request.form.get('capacity'),
+        "time_efficiency": request.form.get('time_efficiency'),
+        "oee_target": request.form.get('oee_target')
+    }
+
+    if wc_id and wc_id != "":
+        db.work_centers.update_one({"_id": ObjectId(wc_id)}, {"$set": data})
+    else:
+        db.work_centers.insert_one(data)
+        
+    return redirect(url_for('pages.work_centers'))
+
+@pages_bp.route('/api/work-centers/<wc_id>')
+def get_wc_details(wc_id):
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    wc = db.work_centers.find_one({"_id": ObjectId(wc_id)})
+    if wc:
+        wc['_id'] = str(wc['_id'])
+        return jsonify(wc)
+    return jsonify({"error": "Not found"}), 404
+
+@pages_bp.route('/api/work-centers/delete/<wc_id>', methods=['POST'])
+def delete_work_center(wc_id):
+    if 'user' not in session: return jsonify({"error": "Unauthorized"}), 401
+    db.work_centers.delete_one({"_id": ObjectId(wc_id)})
+    return redirect(url_for('pages.work_centers'))
