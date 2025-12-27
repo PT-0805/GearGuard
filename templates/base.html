@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GearGuard Maintenance</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; background-color: #f4f4f4; }
+        .app-container { background: white; min-height: 100vh; }
+        
+        /* THE NAVBAR (From your wireframe) */
+        .nav { background-color: #1a1a1a; color: white; padding: 15px 20px; display: flex; align-items: center; }
+        .nav .brand { font-weight: bold; margin-right: 40px; font-size: 18px; }
+        .nav a { margin-right: 20px; text-decoration: none; color: #ccc; font-size: 15px; }
+        .nav a:hover, .nav a.active { color: white; font-weight: bold; border-bottom: 2px solid white; }
+        .logout { margin-left: auto; color: #ff6b6b !important; }
+
+        /* CONTENT AREA */
+        .content { padding: 30px; }
+        
+        /* BASIC TABLE STYLE (Used everywhere) */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { text-align: left; border-bottom: 2px solid #333; padding: 10px; }
+        td { border-bottom: 1px solid #ccc; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="nav">
+            <div class="brand">Maintenance</div>
+            <a href="{{ url_for('dashboard.view_dashboard') }}" class="{{ 'active' if active_page == 'dashboard' else '' }}">Dashboard</a>
+            <a href="{{ url_for('pages.calendar') }}" class="{{ 'active' if active_page == 'calendar' else '' }}">Calendar</a>
+            <a href="{{ url_for('pages.equipment') }}" class="{{ 'active' if active_page == 'equipment' else '' }}">Equipment</a>
+            <a href="{{ url_for('pages.teams') }}" class="{{ 'active' if active_page == 'teams' else '' }}">Teams</a>
+            <a href="{{ url_for('auth.logout') }}" class="logout">Logout</a>
+        </div>
+
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</body>
+</html>

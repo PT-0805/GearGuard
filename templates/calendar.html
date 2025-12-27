@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Maintenance Calendar (Preventive Only)</h2>
+    <ul>
+        {% for req in requests %}
+            <li>
+                <strong>{{ req.scheduled_date }}</strong>: 
+                {{ req.subject }} on {{ req.equipment_name }}
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

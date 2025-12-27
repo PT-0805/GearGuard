@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+    <h2>Equipment Inventory</h2>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Serial No</th>
+            <th>Dept</th>
+            <th>Location</th>
+            <th>Status</th>
+        </tr>
+        {% for item in equipment %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.serial_number }}</td>
+            <td>{{ item.department }}</td>
+            <td>{{ item.location }}</td>
+            <td>{{ item.health }}% ({{ item.status }})</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% endblock %}
